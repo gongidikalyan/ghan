@@ -1,0 +1,6 @@
+{
+  "name": "Fast n Fun",
+  "description": "Fast n Fun: Fast-paced mobile reaction & attention game. How far can you go?",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

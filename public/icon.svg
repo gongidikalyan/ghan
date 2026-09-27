@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="16" flood-color="#f43f5e" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Background with safe zone margin -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- Heart Icon with Glow -->
+  <g filter="url(#glow)">
+    <path d="M256 420s-140-84.5-140-192c0-54.8 43.6-96 96-96 35.8 0 62.7 18.5 76 44 13.3-25.5 40.2-44 76-44 52.4 0 96 41.2 96 96 0 107.5-140 192-140 192z" fill="url(#heartGrad)" />
+  </g>
+
+  <!-- Central "1" Badge -->
+  <text x="256" y="275" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="110" fill="#ffffff" text-anchor="middle" dominant-baseline="central">1</text>
+  
+  <!-- "FAST N FUN" Text -->
+  <text x="256" y="465" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="28" fill="#94a3b8" letter-spacing="4" text-anchor="middle">FAST N FUN</text>
+</svg>
