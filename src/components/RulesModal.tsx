@@ -15,70 +15,46 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
 
   const rules = [
     {
-      title: 'TAP THE COLOR',
+      title: 'LANE ACTION & DODGE',
       badge: '01',
-      desc: 'Tap the shape matching the requested color name. Beware of tricky ink text!',
-      icon: '🎨',
+      desc: 'Knife Dodge, Meteor Dodge, Laser Dodge, Catch the Star, and Coin Catch! Move lanes to evade or catch.',
+      icon: '🏃',
     },
     {
-      title: "DON'T TOUCH",
+      title: 'TENSION METERS & TIMING',
       badge: '02',
-      desc: 'Tap ANY safe object on screen, but NEVER touch the forbidden hazard!',
-      icon: '🚫',
-    },
-    {
-      title: 'FIND THE ODD ONE',
-      badge: '03',
-      desc: 'Spot the single subtle difference (color, angle, or symbol) among identical items.',
-      icon: '🔍',
-    },
-    {
-      title: 'REMEMBER POSITION',
-      badge: '04',
-      desc: 'Memorize the grid tile where the icon flashes, then tap the exact hidden spot!',
-      icon: '🧠',
-    },
-    {
-      title: 'STOP THE TARGET',
-      badge: '05',
-      desc: 'A moving marker sweeps the track. Tap when it aligns inside the green zone!',
-      icon: '🎯',
-    },
-    {
-      title: 'SWIPE DIRECTION',
-      badge: '06',
-      desc: 'Swipe or tap Left, Right, Up, or Down. Watch out for the "OPPOSITE" rule!',
-      icon: '↔️',
-    },
-    {
-      title: 'FAST MATH',
-      badge: '07',
-      desc: 'Lightning mental arithmetic: verify True/False, tap Even/Odd, or find Highest number.',
+      desc: 'Bullseye, Rocket Launch, Bottle Flip, Power Charge, Tug of War! Hit sweet spot zones or rapid mash.',
       icon: '⚡',
     },
     {
-      title: 'RAPID TAPS',
-      badge: '08',
-      desc: 'Tap the button the exact number of times requested. Do not over-tap!',
-      icon: '👆',
+      title: 'FLOATING TARGETS & BUBBLES',
+      badge: '03',
+      desc: 'Pop the Bubbles, Balloon Burst, Moving Target, Avoid the Bomb, and Spot the Crack!',
+      icon: '🫧',
     },
     {
-      title: 'ROCK PAPER SCISSORS',
-      badge: '09',
-      desc: 'Pick the winning move (or losing move if requested) against the opponent.',
-      icon: '✂️',
+      title: 'HAZARDS, DOORS & TILES',
+      badge: '04',
+      desc: 'Which Door?, Trap Door, Floor is Lava, Safe Tile, Key & Lock, Escape the Box, and Magnet Match!',
+      icon: '🚪',
     },
     {
-      title: 'SHAPE MATCH',
-      badge: '10',
-      desc: 'Identify and tap the requested geometric shape (Triangle, Star, Diamond, etc.).',
-      icon: '📐',
+      title: 'WIRES & CIRCUIT SWITCHES',
+      badge: '05',
+      desc: 'Bomb Defuse, Wire Connect, Light Switch, Train Switch, Traffic Control, and Pipe Connect!',
+      icon: '💣',
     },
     {
-      title: 'ORDER SEQUENCE',
-      badge: '11',
-      desc: 'Tap scattered numbers or letters in strict ascending sequence (1 → 2 → 3).',
-      icon: '🔢',
+      title: 'MEMORY & CODE SEQUENCES',
+      badge: '06',
+      desc: 'Unlock Code, Disappearing Path, Mirror Match, Rapid Sort, Object Swap, and Order Sequence!',
+      icon: '🔐',
+    },
+    {
+      title: 'REFLEX & BRAIN TEASERS',
+      badge: '07',
+      desc: 'Tap the Color (Stroop), Find the Odd One, Fast Math, Rock Paper Scissors, and Shape Match!',
+      icon: '🎨',
     },
   ];
 
@@ -96,7 +72,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
             <h3 className="text-xl font-black font-display tracking-tight uppercase">
-              11 Challenge Modes
+              50+ Micro Challenges
             </h3>
           </div>
           <button

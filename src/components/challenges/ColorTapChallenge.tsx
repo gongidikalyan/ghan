@@ -46,7 +46,7 @@ export const ColorTapChallenge: React.FC<ColorTapChallengeProps> = ({
           <p className={`text-xs font-semibold tracking-wide ${
             isLight ? 'text-amber-600' : 'text-amber-400'
           }`}>
-            Match the text color!
+            Tap the named color! Ignore distractor text.
           </p>
         )}
       </div>

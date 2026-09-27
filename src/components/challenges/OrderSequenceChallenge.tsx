@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ColorMode, OrderItem, OrderSequencePayload } from '../../types/game';
 import { soundManager } from '../../utils/audio';
 import { hapticManager } from '../../utils/haptics';
@@ -22,9 +22,10 @@ export const OrderSequenceChallenge: React.FC<OrderSequenceChallengeProps> = ({
   const isLight = colorMode === 'light';
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [clearedIds, setClearedIds] = useState<string[]>([]);
+  const isFinishedRef = useRef<boolean>(false);
 
   const handleItemClick = (item: OrderItem) => {
-    if (clearedIds.includes(item.id)) return;
+    if (isFinishedRef.current || clearedIds.includes(item.id)) return;
 
     if (item.stepNumber === currentStep) {
       soundManager.playTap();
@@ -36,9 +37,11 @@ export const OrderSequenceChallenge: React.FC<OrderSequenceChallengeProps> = ({
       setCurrentStep(nextStep);
 
       if (nextCleared.length === totalSteps) {
+        isFinishedRef.current = true;
         onCorrect();
       }
     } else {
+      isFinishedRef.current = true;
       onWrong(`Out of order! Tapped ${item.label} instead of next in sequence.`);
     }
   };

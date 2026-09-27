@@ -35,6 +35,12 @@ export const StatsModal: React.FC<StatsModalProps> = ({
     { key: 'rock_paper_scissors', label: 'R-P-S', icon: '✂️' },
     { key: 'shape_match', label: 'Shape Match', icon: '📐' },
     { key: 'order_sequence', label: 'Order Sequence', icon: '🔢' },
+    { key: 'lane_action', label: 'Lane & Dodge', icon: '🏃' },
+    { key: 'tension_meter', label: 'Tension Meters', icon: '⚡' },
+    { key: 'floating_target', label: 'Floating Targets', icon: '🫧' },
+    { key: 'choice_hazard', label: 'Doors & Hazards', icon: '🚪' },
+    { key: 'wire_switch', label: 'Wires & Switches', icon: '💣' },
+    { key: 'code_puzzle', label: 'Code & Logic', icon: '🔐' },
   ];
 
   return (

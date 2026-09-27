@@ -20,9 +20,9 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'Fast n Fun',
-          short_name: 'Fast n Fun',
-          description: 'Fast n Fun: Fast-paced mobile reaction & attention game. How far can you go?',
+          name: 'Speed n Tension',
+          short_name: 'Speed n Tension',
+          description: 'Speed n Tension: High-octane reaction and micro-challenge survival. One mistake ends your run. How long can you survive the tension?',
           theme_color: '#020617',
           background_color: '#020617',
           display: 'standalone',

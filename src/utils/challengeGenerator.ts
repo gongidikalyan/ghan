@@ -9,6 +9,7 @@ import {
   RPSChoice,
   ShapeItem,
 } from '../types/game';
+import { getDynamicDuration, getSpeedMultiplier } from './difficulty';
 
 // 12 High-Contrast Curated Colors
 const COLOR_PALETTE = [
@@ -189,13 +190,9 @@ function generateColorTap(score: number): Challenge {
   const targetIndex = Math.floor(Math.random() * itemCount);
   const target = shuffledColors[targetIndex];
 
-  let durationMs = 3600;
-  if (score >= 30) durationMs = 1700;
-  else if (score >= 15) durationMs = 2300;
-  else if (score >= 6) durationMs = 2800;
-
   const isStroop = score >= 14 && Math.random() > 0.45;
   let items: ColorTapItem[] = [];
+  const durationMs = getDynamicDuration(3500, score, 900);
 
   if (isStroop) {
     const otherColors = COLOR_PALETTE.filter(c => c.name !== target.name);
@@ -284,11 +281,7 @@ function generateDontTouch(score: number): Challenge {
   ];
 
   const items = shuffle(rawItems);
-
-  let durationMs = 3500;
-  if (score >= 30) durationMs = 1750;
-  else if (score >= 15) durationMs = 2300;
-  else if (score >= 6) durationMs = 2800;
+  const durationMs = getDynamicDuration(3400, score, 850);
 
   return {
     id,
@@ -338,10 +331,7 @@ function generateFindOdd(score: number): Challenge {
     });
   }
 
-  let durationMs = 3600;
-  if (score >= 30) durationMs = 1750;
-  else if (score >= 15) durationMs = 2400;
-  else if (score >= 6) durationMs = 2900;
+  const durationMs = getDynamicDuration(3500, score, 950);
 
   return {
     id,
@@ -386,10 +376,7 @@ function generateMemoryPosition(score: number): Challenge {
 
   const icons = ['🔴', '💎', '⭐', '⚡', '🔥', '👑', '🎯'];
   const targetIcon = icons[Math.floor(Math.random() * icons.length)];
-
-  let answerTimeMs = 3000;
-  if (score >= 30) answerTimeMs = 1600;
-  else if (score >= 15) answerTimeMs = 2100;
+  const answerTimeMs = getDynamicDuration(2900, score, 1000);
 
   return {
     id,
@@ -412,20 +399,9 @@ function generateMemoryPosition(score: number): Challenge {
 // 5. Stop The Target
 function generateStopTarget(score: number): Challenge {
   const id = `stop_target_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  let targetZoneWidthPercent = 30;
-  let speedMs = 1350;
-
-  if (score >= 30) {
-    targetZoneWidthPercent = 15;
-    speedMs = 750;
-  } else if (score >= 18) {
-    targetZoneWidthPercent = 18;
-    speedMs = 900;
-  } else if (score >= 10) {
-    targetZoneWidthPercent = 22;
-    speedMs = 1100;
-  }
-
+  const speedMult = getSpeedMultiplier(score);
+  const targetZoneWidthPercent = Math.max(14, Math.round(28 / Math.pow(speedMult, 0.4)));
+  const speedMs = Math.max(500, Math.round(1350 / speedMult));
   const minStart = 15;
   const maxStart = 85 - targetZoneWidthPercent;
   const targetZoneStartPercent = Math.floor(minStart + Math.random() * (maxStart - minStart));
@@ -463,10 +439,7 @@ function generateSwipeDirection(score: number): Challenge {
     DOWN: 'UP',
   };
   const targetDirection = isOpposite ? oppositeMap[promptDir] : promptDir;
-
-  let durationMs = 3200;
-  if (score >= 30) durationMs = 1500;
-  else if (score >= 15) durationMs = 2100;
+  const durationMs = getDynamicDuration(2800, score, 800);
 
   return {
     id,
@@ -489,10 +462,7 @@ function generateSwipeDirection(score: number): Challenge {
 function generateQuickMath(score: number): Challenge {
   const id = `math_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const mode = Math.random();
-
-  let durationMs = 3500;
-  if (score >= 30) durationMs = 1700;
-  else if (score >= 15) durationMs = 2300;
+  const durationMs = getDynamicDuration(3500, score, 1100);
 
   if (mode < 0.4) {
     // True/False arithmetic
@@ -592,7 +562,8 @@ function generateTapCount(score: number): Challenge {
   let targetCount = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
   if (score >= 20) targetCount = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
 
-  const durationMs = targetCount * 700 + 800;
+  const baseDuration = targetCount * 650 + 750;
+  const durationMs = getDynamicDuration(baseDuration, score, 900);
 
   return {
     id,
@@ -634,10 +605,7 @@ function generateRPS(score: number): Challenge {
 
   const isLoseGoal = score >= 16 && Math.random() > 0.6;
   const targetChoice = isLoseGoal ? loseMap[opponentChoice] : winMap[opponentChoice];
-
-  let durationMs = 3200;
-  if (score >= 30) durationMs = 1500;
-  else if (score >= 15) durationMs = 2100;
+  const durationMs = getDynamicDuration(2900, score, 850);
 
   return {
     id,
@@ -682,10 +650,7 @@ function generateShapeMatch(score: number): Challenge {
     label: s.label,
     isCorrect: s.key === targetShape.key,
   }));
-
-  let durationMs = 3400;
-  if (score >= 30) durationMs = 1600;
-  else if (score >= 15) durationMs = 2200;
+  const durationMs = getDynamicDuration(3100, score, 850);
 
   return {
     id,
@@ -725,7 +690,8 @@ function generateOrderSequence(score: number): Challenge {
   }));
 
   const items = shuffle(rawItems);
-  const durationMs = totalSteps * 900 + 700;
+  const baseDuration = totalSteps * 850 + 700;
+  const durationMs = getDynamicDuration(baseDuration, score, 1100);
 
   return {
     id,
@@ -743,6 +709,511 @@ function generateOrderSequence(score: number): Challenge {
   };
 }
 
+// 12. Lane Action (Knife Dodge, Meteor Dodge, Catch Star, Coin Catch, Laser Dodge, Falling Object, Magnetic Maze)
+function generateLaneAction(score: number): Challenge {
+  const id = `lane_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const subTypes = [
+    { type: 'knife_dodge', title: 'KNIFE DODGE', instruction: 'AVOID THE KNIVES!', player: '🏃', hazard: '🔪', mode: 'dodge' as const, hint: 'Step into the safe lane!' },
+    { type: 'meteor_dodge', title: 'METEOR DODGE', instruction: 'EVADE FALLING METEORS!', player: '🚀', hazard: '☄️', mode: 'dodge' as const, hint: 'Evade incoming meteors!' },
+    { type: 'laser_dodge', title: 'LASER DODGE', instruction: 'AVOID ELECTRIC BEAM!', player: '🤖', hazard: '⚡', mode: 'dodge' as const, hint: 'Find the dead zone!' },
+    { type: 'magnetic_maze', title: 'MAGNETIC MAZE', instruction: 'DODGE MAGNETIC SPIKES!', player: '🧲', hazard: '🌵', mode: 'dodge' as const, hint: 'Steer clear of spikes!' },
+    { type: 'catch_star', title: 'CATCH THE STAR', instruction: 'CATCH THE FALLING STAR!', player: '🧺', target: '⭐', mode: 'catch' as const, hint: 'Line up basket under star!' },
+    { type: 'coin_catch', title: 'COIN CATCH', instruction: 'CATCH GOLD COIN!', player: '👛', target: '🪙', mode: 'catch' as const, hint: 'Grab the falling coin!' },
+    { type: 'falling_object', title: 'FALLING OBJECT', instruction: 'CATCH THE DIAMOND!', player: '🧤', target: '💎', mode: 'catch' as const, hint: 'Catch the rare gem!' },
+  ];
+
+  const picked = subTypes[Math.floor(Math.random() * subTypes.length)];
+  const laneCount = 3;
+  const initialPlayerLane = 1; // Center lane
+
+  let hazardLanes: number[] = [];
+  let targetLane = 1;
+
+  if (picked.mode === 'dodge') {
+    // 1 or 2 hazard lanes
+    const safeLane = Math.floor(Math.random() * laneCount);
+    hazardLanes = [0, 1, 2].filter(l => l !== safeLane);
+  } else {
+    // Catch in a random lane
+    targetLane = Math.floor(Math.random() * laneCount);
+  }
+
+  const durationMs = getDynamicDuration(2900, score, 950);
+
+  return {
+    id,
+    type: 'lane_action',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'lane_action',
+      data: {
+        mode: picked.mode,
+        playerIcon: picked.player,
+        targetIcon: picked.target || '⭐',
+        hazardIcon: picked.hazard || '💥',
+        laneCount,
+        initialPlayerLane,
+        hazardLanes,
+        targetLane,
+        hint: picked.hint,
+      },
+    },
+  };
+}
+
+// 13. Tension Meter (Bullseye, Rocket Launch/Landing, Knife Throw, Bottle Flip, Power Charge, Tug of War, Temperature, Balance, Wind)
+function generateTensionMeter(score: number): Challenge {
+  const id = `meter_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const meterModes = [
+    { subType: 'bullseye', title: 'BULLSEYE', instruction: 'STOP POINTER IN CENTER!', icon: '🎯', zoneStart: 42, zoneWidth: 20, speed: 1100, label: 'Hit the center bullseye!' },
+    { subType: 'rocket_launch', title: 'ROCKET LAUNCH', instruction: 'LAUNCH AT GREEN ZONE!', icon: '🚀', zoneStart: 65, zoneWidth: 22, speed: 1000, label: 'Hit maximum thrust!' },
+    { subType: 'rocket_landing', title: 'ROCKET LANDING', instruction: 'LAND IN TOUCHDOWN ZONE!', icon: '🛬', zoneStart: 35, zoneWidth: 22, speed: 1150, label: 'Touchdown safely!' },
+    { subType: 'knife_throw', title: 'KNIFE THROW', instruction: 'STRIKE TARGET BOARD!', icon: '🗡️', zoneStart: 45, zoneWidth: 18, speed: 950, label: 'Throw into the board!' },
+    { subType: 'bottle_flip', title: 'BOTTLE FLIP', instruction: 'LAND BOTTLE UPRIGHT!', icon: '🍾', zoneStart: 40, zoneWidth: 18, speed: 1050, label: 'Land upright!' },
+    { subType: 'power_charge', title: 'POWER CHARGE', instruction: 'STOP IN MAX POWER ZONE!', icon: '🔋', zoneStart: 72, zoneWidth: 18, speed: 900, label: 'Full charge capacity!' },
+    { subType: 'tug_of_war', title: 'TUG OF WAR', instruction: 'PULL ROPE: RAPID MASH!', icon: '🪢', zoneStart: 50, zoneWidth: 50, speed: 1000, label: 'Mash button rapidly!', isMash: true },
+    { subType: 'temperature_control', title: 'TEMPERATURE', instruction: 'STABILIZE TEMPERATURE!', icon: '🌡️', zoneStart: 40, zoneWidth: 22, speed: 1200, label: 'Keep in green range!' },
+    { subType: 'balance_meter', title: 'BALANCE METER', instruction: 'KEEP METER BALANCED!', icon: '⚖️', zoneStart: 42, zoneWidth: 18, speed: 1100, label: 'Maintain level balance!' },
+    { subType: 'wind_control', title: 'WIND CONTROL', instruction: 'ALIGN PARACHUTE WITH WIND!', icon: '🌬️', zoneStart: 38, zoneWidth: 22, speed: 1100, label: 'Adjust flap angle!' },
+  ];
+
+  const picked = meterModes[Math.floor(Math.random() * meterModes.length)];
+  const speedMult = getSpeedMultiplier(score);
+  let speed = Math.max(450, Math.round(picked.speed / speedMult));
+  let zoneWidth = Math.max(10, Math.round(picked.zoneWidth / Math.pow(speedMult, 0.4)));
+
+  const durationMs = picked.isMash 
+    ? getDynamicDuration(2700, score, 1300) 
+    : Math.round(speed * 2.7);
+
+  return {
+    id,
+    type: 'tension_meter',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'tension_meter',
+      data: {
+        meterType: picked.isMash ? 'rapid_mash' : 'timing_stop',
+        subType: picked.subType,
+        centerIcon: picked.icon,
+        targetZoneStartPercent: picked.zoneStart,
+        targetZoneWidthPercent: zoneWidth,
+        speedMs: speed,
+        mashTargetTaps: score >= 20 ? 6 : 5,
+        label: picked.label,
+      },
+    },
+  };
+}
+
+// 14. Floating Target (Pop Bubbles, Balloon Burst, Moving Target, Final Target, Avoid Bomb, Spot Crack)
+function generateFloatingTarget(score: number): Challenge {
+  const id = `float_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const modes = [
+    { subType: 'pop_bubbles', title: 'POP THE BUBBLES', instruction: 'POP THE GREEN BUBBLE!', targetIcon: '🫧', hazardIcon: '⚪', desc: 'Pop green target bubble' },
+    { subType: 'balloon_burst', title: 'BALLOON BURST', instruction: 'POP THE RED BALLOON!', targetIcon: '🎈', hazardIcon: '🔵', desc: 'Pop red balloon' },
+    { subType: 'moving_target', title: 'MOVING TARGET', instruction: 'HIT MOVING CROSSHAIR!', targetIcon: '🎯', hazardIcon: '🔘', desc: 'Tap crosshair target' },
+    { subType: 'final_target', title: 'FINAL TARGET', instruction: 'SURVIVE AND HIT TARGET!', targetIcon: '🎪', hazardIcon: '◽', desc: 'Tap the final target' },
+    { subType: 'avoid_bomb', title: 'AVOID THE BOMB', instruction: 'TAP GEM, AVOID BOMB!', targetIcon: '💎', hazardIcon: '💣', desc: 'Tap gem, never bomb!' },
+    { subType: 'spot_crack', title: 'SPOT THE CRACK', instruction: 'TAP THE CRACKED SHELL 🐣!', targetIcon: '🐣', hazardIcon: '🥚', desc: 'Tap cracked item' },
+  ];
+
+  const picked = modes[Math.floor(Math.random() * modes.length)];
+
+  // Create 3 floating positions
+  const positions = [
+    { x: 25, y: 30 },
+    { x: 75, y: 35 },
+    { x: 50, y: 70 },
+  ];
+  const shuffledPositions = shuffle(positions);
+  const targetPos = shuffledPositions[0];
+
+  const items = [
+    {
+      id: 'target_item_1',
+      icon: picked.targetIcon,
+      isTarget: true,
+      xPercent: targetPos.x,
+      yPercent: targetPos.y,
+      sizePx: 64,
+    },
+    {
+      id: 'hazard_item_1',
+      icon: picked.hazardIcon,
+      isTarget: false,
+      xPercent: shuffledPositions[1].x,
+      yPercent: shuffledPositions[1].y,
+      sizePx: 58,
+    },
+    {
+      id: 'hazard_item_2',
+      icon: picked.hazardIcon,
+      isTarget: false,
+      xPercent: shuffledPositions[2].x,
+      yPercent: shuffledPositions[2].y,
+      sizePx: 58,
+    },
+  ];
+
+  const durationMs = getDynamicDuration(3300, score, 950);
+
+  return {
+    id,
+    type: 'floating_target',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'floating_target',
+      data: {
+        subType: picked.subType,
+        items,
+        requiredPops: 1,
+        targetDescription: picked.desc,
+        penaltyOnWrong: true,
+      },
+    },
+  };
+}
+
+// 15. Choice Hazard (Which Door?, Trap Door, Safe Tile, Floor Is Lava, Portal Match, Teleport Choice, Key & Lock, Escape Box, Shadow Match, Color Pour, Magnet Match)
+function generateChoiceHazard(score: number): Challenge {
+  const id = `choice_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const scenarios = [
+    {
+      subType: 'which_door',
+      title: 'WHICH DOOR?',
+      instruction: 'CHOOSE THE SAFE DOOR!',
+      question: 'OPEN DOOR?',
+      clue: 'THE BLUE DOOR HAS NO TRAPS',
+      options: [
+        { id: 'opt_blue', title: 'BLUE DOOR', icon: '🟦', isCorrect: true },
+        { id: 'opt_red', title: 'RED DOOR', icon: '🟥', isCorrect: false },
+        { id: 'opt_gold', title: 'GOLD DOOR', icon: '🟨', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'trap_door',
+      title: 'TRAP DOOR',
+      instruction: 'AVOID THE DANGEROUS TRAPDOOR!',
+      question: 'PICK STABLE DOOR',
+      clue: 'DOOR C HAS A CRUMBLING HINGE',
+      options: [
+        { id: 'opt_a', title: 'DOOR A', icon: '🚪', isCorrect: true },
+        { id: 'opt_b', title: 'DOOR B', icon: '🚪', isCorrect: true },
+        { id: 'opt_c', title: 'DOOR C ⚠️', icon: '🕳️', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'floor_is_lava',
+      title: 'FLOOR IS LAVA',
+      instruction: 'JUMP TO SAFE PLATFORM!',
+      question: 'LAVA IS RISING!',
+      clue: 'STEP ON THE HARD STONE ONLY',
+      options: [
+        { id: 'opt_stone', title: 'STONE', icon: '🪨', isCorrect: true },
+        { id: 'opt_lava', title: 'LAVA', icon: '🔥', isCorrect: false },
+        { id: 'opt_magma', title: 'MAGMA', icon: '🌋', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'safe_tile',
+      title: 'SAFE TILE',
+      instruction: 'STEP ON THE GLOWING TILE!',
+      question: 'SELECT SAFE TILE',
+      options: [
+        { id: 'opt_green', title: 'STABLE TILE', icon: '🟩', isCorrect: true },
+        { id: 'opt_decay1', title: 'CRACKED', icon: '⬛', isCorrect: false },
+        { id: 'opt_decay2', title: 'BROKEN', icon: '⬛', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'portal_match',
+      title: 'PORTAL MATCH',
+      instruction: 'SEND ORB TO PURPLE PORTAL!',
+      question: 'ORB: 🔮 PURPLE',
+      options: [
+        { id: 'opt_p_purp', title: 'PURPLE PORTAL', icon: '🌀', isCorrect: true },
+        { id: 'opt_p_oran', title: 'ORANGE PORTAL', icon: '🌀', isCorrect: false },
+        { id: 'opt_p_cyan', title: 'CYAN PORTAL', icon: '🌀', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'key_and_lock',
+      title: 'KEY & LOCK',
+      instruction: 'MATCH KEY TO GOLDEN LOCK 🔒',
+      question: 'LOCK: GOLDEN 🔒',
+      options: [
+        { id: 'opt_k_gold', title: 'GOLD KEY', icon: '🗝️', isCorrect: true },
+        { id: 'opt_k_silv', title: 'SILVER KEY', icon: '🗝️', isCorrect: false },
+        { id: 'opt_k_iron', title: 'IRON KEY', icon: '🗝️', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'escape_box',
+      title: 'ESCAPE THE BOX',
+      instruction: 'FIND THE UNLOCKED EXIT!',
+      question: 'SEARCH EXIT GRATE',
+      clue: 'VENT 2 HAS UNBOLTED SCREWS',
+      options: [
+        { id: 'opt_e_v1', title: 'VENT 1', icon: '🔒', isCorrect: false },
+        { id: 'opt_e_v2', title: 'VENT 2', icon: '🚪', isCorrect: true },
+        { id: 'opt_e_v3', title: 'VENT 3', icon: '🔒', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'color_pour',
+      title: 'COLOR POUR',
+      instruction: 'POUR INTO RED BEAKER!',
+      question: 'LIQUID: 🧪 RED',
+      options: [
+        { id: 'opt_cp_red', title: 'RED BEAKER', icon: '🧪', isCorrect: true },
+        { id: 'opt_cp_blue', title: 'BLUE BEAKER', icon: '🧪', isCorrect: false },
+        { id: 'opt_cp_green', title: 'GREEN BEAKER', icon: '🧪', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'magnet_match',
+      title: 'MAGNET MATCH',
+      instruction: 'ATTRACT NORTH POLE (+)',
+      question: 'TARGET: NORTH (+)',
+      options: [
+        { id: 'opt_m_north', title: 'NORTH (+)', icon: '🧲', isCorrect: true },
+        { id: 'opt_m_south', title: 'SOUTH (-)', icon: '🧲', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'shadow_match',
+      title: 'SHADOW MATCH',
+      instruction: 'MATCH ITEM TO SHADOW ⬛',
+      question: 'ANIMAL: 🦁 LION',
+      options: [
+        { id: 'opt_sm_lion', title: 'LION SHADOW', icon: '⬛', isCorrect: true },
+        { id: 'opt_sm_bear', title: 'BEAR SHADOW', icon: '⬛', isCorrect: false },
+      ],
+    },
+  ];
+
+  const picked = scenarios[Math.floor(Math.random() * scenarios.length)];
+  const shuffledOptions = shuffle(picked.options);
+  const durationMs = getDynamicDuration(3300, score, 950);
+
+  return {
+    id,
+    type: 'choice_hazard',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'choice_hazard',
+      data: {
+        subType: picked.subType,
+        question: picked.question,
+        clue: picked.clue,
+        options: shuffledOptions,
+      },
+    },
+  };
+}
+
+// 16. Wire Switch (Bomb Defuse, Wire Connect, Light Switch, Train Switch, Traffic Control, Pipe Connect, Gear Match, Shape Rotation)
+function generateWireSwitch(score: number): Challenge {
+  const id = `wire_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const switchModes = [
+    {
+      subType: 'bomb_defuse',
+      title: 'BOMB DEFUSE',
+      instruction: 'CUT THE BLUE WIRE!',
+      prompt: 'DEFUSE TIMER TICKING!',
+      items: [
+        { id: 'wire_red', label: 'RED WIRE', icon: '✂️', isTargetAction: false, state: 'inactive' as const, colorHex: '#ef4444' },
+        { id: 'wire_blue', label: 'BLUE WIRE', icon: '✂️', isTargetAction: true, state: 'inactive' as const, colorHex: '#3b82f6' },
+        { id: 'wire_yellow', label: 'YELLOW WIRE', icon: '✂️', isTargetAction: false, state: 'inactive' as const, colorHex: '#eab308' },
+      ],
+    },
+    {
+      subType: 'wire_connect',
+      title: 'WIRE CONNECT',
+      instruction: 'CONNECT GREEN TERMINAL!',
+      prompt: 'RESTORE POWER FLOW',
+      items: [
+        { id: 'w_conn_green', label: 'GREEN WIRE', icon: '🔌', isTargetAction: true, state: 'inactive' as const, colorHex: '#10b981' },
+        { id: 'w_conn_purple', label: 'PURPLE WIRE', icon: '🔌', isTargetAction: false, state: 'inactive' as const, colorHex: '#a855f7' },
+        { id: 'w_conn_orange', label: 'ORANGE WIRE', icon: '🔌', isTargetAction: false, state: 'inactive' as const, colorHex: '#f97316' },
+      ],
+    },
+    {
+      subType: 'light_switch',
+      title: 'LIGHT SWITCH',
+      instruction: 'FLIP TOGGLE #2 TO POWER ON!',
+      prompt: 'GRID OVERRIDE REQUIRED',
+      items: [
+        { id: 'sw_1', label: 'SWITCH 1', icon: '💡', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+        { id: 'sw_2', label: 'SWITCH 2', icon: '💡', isTargetAction: true, state: 'inactive' as const, colorHex: '#10b981' },
+        { id: 'sw_3', label: 'SWITCH 3', icon: '💡', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+      ],
+    },
+    {
+      subType: 'train_switch',
+      title: 'TRAIN SWITCH',
+      instruction: 'SWITCH TO CLEAR TRACK B!',
+      prompt: 'JUNCTION DEAD-END AHEAD!',
+      items: [
+        { id: 'tr_a', label: 'TRACK A (BLOCKED ⚠️)', icon: '🚂', isTargetAction: false, state: 'inactive' as const, colorHex: '#ef4444' },
+        { id: 'tr_b', label: 'TRACK B (OPEN ✓)', icon: '🚂', isTargetAction: true, state: 'inactive' as const, colorHex: '#10b981' },
+      ],
+    },
+    {
+      subType: 'traffic_control',
+      title: 'TRAFFIC CONTROL',
+      instruction: 'CLEAR EMERGENCY AMBULANCE!',
+      prompt: 'OPEN SIGNAL FOR AMBULANCE',
+      items: [
+        { id: 'tc_norm', label: 'LANE 1 (CARS)', icon: '🚗', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+        { id: 'tc_amb', label: 'LANE 2 (AMBULANCE 🚑)', icon: '🚦', isTargetAction: true, state: 'inactive' as const, colorHex: '#10b981' },
+      ],
+    },
+    {
+      subType: 'pipe_connect',
+      title: 'PIPE CONNECT',
+      instruction: 'ROTATE VALVE B TO CONNECT!',
+      prompt: 'WATER PRESSURE BUILDING',
+      items: [
+        { id: 'pipe_a', label: 'VALVE A', icon: '🚰', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+        { id: 'pipe_b', label: 'VALVE B', icon: '🚰', isTargetAction: true, state: 'inactive' as const, colorHex: '#06b6d4' },
+        { id: 'pipe_c', label: 'VALVE C', icon: '🚰', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+      ],
+    },
+    {
+      subType: 'gear_match',
+      title: 'GEAR MATCH',
+      instruction: 'ENGAGE DRIVE GEAR ⚙️',
+      prompt: 'MESH TEETH WITH ROTATING SHAFT',
+      items: [
+        { id: 'gear_drive', label: 'DRIVE COG (12T)', icon: '⚙️', isTargetAction: true, state: 'inactive' as const, colorHex: '#f59e0b' },
+        { id: 'gear_idle', label: 'IDLE COG (24T)', icon: '⚙️', isTargetAction: false, state: 'inactive' as const, colorHex: '#64748b' },
+      ],
+    },
+  ];
+
+  const picked = switchModes[Math.floor(Math.random() * switchModes.length)];
+  const durationMs = getDynamicDuration(3200, score, 900);
+
+  return {
+    id,
+    type: 'wire_switch',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'wire_switch',
+      data: {
+        subType: picked.subType,
+        prompt: picked.prompt,
+        items: picked.items,
+      },
+    },
+  };
+}
+
+// 17. Code Puzzle (Unlock Code, Code Sequence, Disappearing Path, Mirror Match, Rapid Sort, Object Swap, Moving Puzzle)
+function generateCodePuzzle(score: number): Challenge {
+  const id = `code_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  // Choose 3 distinct digits so permutations are guaranteed strictly unique
+  const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const n1 = digits[0];
+  const n2 = digits[1];
+  const n3 = digits[2];
+  const pin = `${n1}${n2}${n3}`;
+  const fakePin1 = `${n2}${n3}${n1}`;
+  const fakePin2 = `${n3}${n1}${n2}`;
+
+  const puzzleModes = [
+    {
+      subType: 'unlock_code',
+      title: 'UNLOCK CODE',
+      instruction: 'RECALL AND ENTER CODE!',
+      displayCode: pin,
+      flashMs: 800,
+      options: [
+        { id: 'pin_c', label: pin, isCorrect: true },
+        { id: 'pin_w1', label: fakePin1, isCorrect: false },
+        { id: 'pin_w2', label: fakePin2, isCorrect: false },
+      ],
+    },
+    {
+      subType: 'rapid_sort',
+      title: 'RAPID SORT',
+      instruction: 'SORT APPLE 🍎 INTO FRUIT BASKET!',
+      displayCode: 'ITEM: 🍎 FRESH APPLE',
+      flashMs: 0,
+      options: [
+        { id: 'sort_basket', label: 'FRUIT BASKET 🧺', isCorrect: true },
+        { id: 'sort_trash', label: 'TRASH BIN 🗑️', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'mirror_match',
+      title: 'MIRROR MATCH',
+      instruction: 'SELECT THE MIRRORED PATTERN!',
+      displayCode: 'ORIGINAL: ◀ ◀ ▲',
+      flashMs: 0,
+      options: [
+        { id: 'mm_cor', label: '▲ ▶ ▶', isCorrect: true },
+        { id: 'mm_w1', label: '▼ ◀ ◀', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'object_swap',
+      title: 'OBJECT SWAP',
+      instruction: 'COMPLETE THE SEQUENCE 🔴 🟡 🟢',
+      displayCode: 'CURRENT: 🔴 🟢 🟡',
+      flashMs: 0,
+      options: [
+        { id: 'sw_cor', label: 'SWAP POS 2 & 3', isCorrect: true },
+        { id: 'sw_w1', label: 'SWAP POS 1 & 2', isCorrect: false },
+      ],
+    },
+    {
+      subType: 'disappearing_path',
+      title: 'DISAPPEARING PATH',
+      instruction: 'WHICH PATH WAS FLASHED?',
+      displayCode: 'FLASHED: 🐾 PATH NORTH',
+      flashMs: 700,
+      options: [
+        { id: 'dp_c', label: 'PATH NORTH', isCorrect: true },
+        { id: 'dp_w', label: 'PATH SOUTH', isCorrect: false },
+      ],
+    },
+  ];
+
+  const picked = puzzleModes[Math.floor(Math.random() * puzzleModes.length)];
+  const shuffledOptions = shuffle(picked.options);
+  const durationMs = getDynamicDuration(3400, score, 1000);
+
+  return {
+    id,
+    type: 'code_puzzle',
+    title: picked.title,
+    instruction: picked.instruction,
+    durationMs,
+    payload: {
+      type: 'code_puzzle',
+      data: {
+        subType: picked.subType,
+        displayCode: picked.displayCode,
+        flashMs: picked.flashMs,
+        options: shuffledOptions,
+      },
+    },
+  };
+}
+
 const ALL_CHALLENGE_TYPES: ChallengeType[] = [
   'color_tap',
   'dont_touch',
@@ -755,6 +1226,12 @@ const ALL_CHALLENGE_TYPES: ChallengeType[] = [
   'rock_paper_scissors',
   'shape_match',
   'order_sequence',
+  'lane_action',
+  'tension_meter',
+  'floating_target',
+  'choice_hazard',
+  'wire_switch',
+  'code_puzzle',
 ];
 
 export function generateNextChallenge(score: number, lastType?: ChallengeType): Challenge {
@@ -785,7 +1262,19 @@ export function generateNextChallenge(score: number, lastType?: ChallengeType): 
       return generateShapeMatch(score);
     case 'order_sequence':
       return generateOrderSequence(score);
+    case 'lane_action':
+      return generateLaneAction(score);
+    case 'tension_meter':
+      return generateTensionMeter(score);
+    case 'floating_target':
+      return generateFloatingTarget(score);
+    case 'choice_hazard':
+      return generateChoiceHazard(score);
+    case 'wire_switch':
+      return generateWireSwitch(score);
+    case 'code_puzzle':
+      return generateCodePuzzle(score);
     default:
-      return generateColorTap(score);
+      return generateLaneAction(score);
   }
 }

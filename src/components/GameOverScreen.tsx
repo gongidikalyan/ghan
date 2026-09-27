@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { RotateCcw, Home, Trophy, Share2, Flame, Check } from 'lucide-react';
+import { RotateCcw, Home, Trophy, Share2, Flame, Check, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ColorMode } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { hapticManager } from '../utils/haptics';
+import { getDifficultyInfo } from '../utils/difficulty';
 
 interface GameOverScreenProps {
   score: number;
@@ -48,11 +49,11 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
   }, [isNewBest, score]);
 
   const handleShare = async () => {
-    const shareText = `I survived ${score} challenges in Fast n Fun! Can you beat my score? ⚡🎮`;
+    const shareText = `I survived ${score} challenges in Speed n Tension! Can you beat my score? ⚡🔥`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Fast n Fun Game Score',
+          title: 'Speed n Tension Game Score',
           text: shareText,
           url: window.location.href,
         });
@@ -114,32 +115,43 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
             {score}
           </span>
 
-          <div className={`w-full pt-4 border-t flex items-center justify-around text-xs ${
+          <div className={`w-full pt-4 border-t grid grid-cols-3 text-center text-xs ${
             isLight ? 'border-slate-100' : 'border-slate-800'
           }`}>
             <div className="flex flex-col items-center">
               <span className={`font-semibold uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
                 BEST
               </span>
-              <span className={`text-lg font-bold font-mono-numbers ${
+              <span className={`text-base font-bold font-mono-numbers ${
                 isLight ? 'text-amber-600' : 'text-amber-400'
               }`}>
                 {bestScore}
               </span>
             </div>
 
-            <div className={`h-6 w-px ${isLight ? 'bg-slate-200' : 'bg-slate-800'}`} />
+            <div className="flex flex-col items-center border-x border-slate-200/50 dark:border-slate-800/80">
+              <span className={`font-semibold uppercase flex items-center gap-1 ${
+                isLight ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+                <Flame className="w-3 h-3 text-orange-500" /> COMBO
+              </span>
+              <span className={`text-base font-bold font-mono-numbers ${
+                isLight ? 'text-orange-600' : 'text-orange-400'
+              }`}>
+                {maxCombo > 1 ? `${maxCombo}x` : '—'}
+              </span>
+            </div>
 
             <div className="flex flex-col items-center">
               <span className={`font-semibold uppercase flex items-center gap-1 ${
                 isLight ? 'text-slate-400' : 'text-slate-500'
               }`}>
-                <Flame className="w-3 h-3 text-orange-500" /> MAX COMBO
+                <Zap className="w-3 h-3 text-rose-500" /> SPEED
               </span>
-              <span className={`text-lg font-bold font-mono-numbers ${
-                isLight ? 'text-orange-600' : 'text-orange-400'
+              <span className={`text-base font-bold font-mono-numbers ${
+                isLight ? 'text-rose-600' : 'text-rose-400'
               }`}>
-                {maxCombo > 1 ? `${maxCombo}x` : '—'}
+                {getDifficultyInfo(score).speedLabel}
               </span>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Trophy, BarChart2, Settings, HelpCircle, Heart, Sun, Moon } from 'lucide-react';
+import { Play, Trophy, BarChart2, Settings, HelpCircle, Sun, Moon } from 'lucide-react';
 import { ColorMode, UserStats } from '../types/game';
 
 interface HomeScreenProps {
@@ -89,32 +89,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* Hero Branding */}
       <div className="w-full text-center flex flex-col items-center my-auto">
-        {/* Heart Emblem */}
-        <div className="relative mb-4">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border shadow-lg ${
-            isLight
-              ? 'bg-rose-50 border-rose-200/80 shadow-rose-200/40'
-              : 'bg-rose-500/10 border-rose-500/20 shadow-rose-900/20'
-          }`}>
-            <Heart className="w-9 h-9 fill-rose-500 text-rose-500 animate-pulse" />
-          </div>
-          <span className="absolute -bottom-1 -right-1 bg-rose-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm">
-            1
-          </span>
-        </div>
-
-        {/* Title */}
-        <h1 className={`text-5xl sm:text-6xl font-black font-display tracking-tight uppercase leading-none mb-3 ${
+        {/* Title: SPEED on line 1, N on line 2, TENSION on line 3 */}
+        <h1 className={`text-5xl sm:text-6xl font-black font-display tracking-tight uppercase leading-[0.88] flex flex-col items-center mb-4 ${
           isLight ? 'text-slate-900' : 'text-white'
         }`}>
-          FAST N FUN
+          <span>SPEED</span>
+          <span className="text-3xl sm:text-4xl text-rose-500 font-extrabold my-1">N</span>
+          <span>TENSION</span>
         </h1>
 
         {/* Subtitle / Hook */}
         <p className={`text-sm font-semibold tracking-wide uppercase mb-8 ${
           isLight ? 'text-slate-500' : 'text-slate-400'
         }`}>
-          FAST REACTIONS. HOW FAR CAN YOU GO?
+          HIGH SPEED. HIGH TENSION. ONE LIFE.
         </p>
 
         {/* Personal Best Display */}
@@ -142,14 +130,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
       </div>
 
-      {/* Bottom Footer Notice */}
-      <div className={`w-full text-center text-xs flex items-center justify-center gap-2 ${
-        isLight ? 'text-slate-500' : 'text-slate-500'
-      }`}>
-        <span>Instant reaction challenges</span>
-        <span aria-hidden="true">·</span>
-        <span>Offline ready</span>
-      </div>
+      {/* Empty spacer replacing footer */}
+      <div className="h-2" />
     </div>
   );
 };

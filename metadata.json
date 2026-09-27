@@ -1,6 +1,6 @@
 {
-  "name": "Fast n Fun",
-  "description": "Fast n Fun: Fast-paced mobile reaction & attention game. How far can you go?",
+  "name": "Speed n Tension",
+  "description": "Speed n Tension: High-octane reaction and micro-challenge survival. One mistake ends your run. How long can you survive the tension?",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

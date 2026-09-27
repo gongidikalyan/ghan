@@ -24,6 +24,6 @@
   <!-- Central "1" Badge -->
   <text x="256" y="275" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="110" fill="#ffffff" text-anchor="middle" dominant-baseline="central">1</text>
   
-  <!-- "FAST N FUN" Text -->
-  <text x="256" y="465" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="28" fill="#94a3b8" letter-spacing="4" text-anchor="middle">FAST N FUN</text>
+  <!-- "SPEED N TENSION" Text -->
+  <text x="256" y="465" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="24" fill="#94a3b8" letter-spacing="3" text-anchor="middle">SPEED N TENSION</text>
 </svg>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MousePointerClick } from 'lucide-react';
 import { ColorMode, TapCountPayload } from '../../types/game';
 import { soundManager } from '../../utils/audio';
@@ -22,8 +22,11 @@ export const TapCountChallenge: React.FC<TapCountChallengeProps> = ({
   const { targetCount } = payload;
   const isLight = colorMode === 'light';
   const [currentTaps, setCurrentTaps] = useState<number>(0);
+  const isCompletedRef = useRef<boolean>(false);
 
   const handleTap = () => {
+    if (isCompletedRef.current) return;
+
     const next = currentTaps + 1;
     setCurrentTaps(next);
 
@@ -31,8 +34,10 @@ export const TapCountChallenge: React.FC<TapCountChallengeProps> = ({
     hapticManager.lightTap();
 
     if (next === targetCount) {
+      isCompletedRef.current = true;
       onCorrect();
     } else if (next > targetCount) {
+      isCompletedRef.current = true;
       onWrong(`Over-tapped! You tapped ${next} times instead of ${targetCount}.`);
     }
   };

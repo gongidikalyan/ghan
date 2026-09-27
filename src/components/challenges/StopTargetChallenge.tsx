@@ -62,7 +62,8 @@ export const StopTargetChallenge: React.FC<StopTargetChallengeProps> = ({
     const current = currentPosRef.current;
     const zoneEnd = targetZoneStartPercent + targetZoneWidthPercent;
 
-    const isInside = current >= (targetZoneStartPercent - 1.5) && current <= (zoneEnd + 1.5);
+    // Forgiving tolerance (±3.5%) to account for pin width and human reaction
+    const isInside = current >= (targetZoneStartPercent - 3.5) && current <= (zoneEnd + 3.5);
 
     if (isInside) {
       onCorrect();
@@ -122,7 +123,7 @@ export const StopTargetChallenge: React.FC<StopTargetChallengeProps> = ({
 
           {/* Moving Runner / Target Pin */}
           <div
-            className="absolute top-1 bottom-1 w-5 -ml-2.5 rounded-full bg-rose-600 border-2 border-white shadow-lg flex items-center justify-center z-10 transition-transform duration-75"
+            className="absolute top-1 bottom-1 w-5 -ml-2.5 rounded-full bg-rose-600 border-2 border-white shadow-lg flex items-center justify-center z-10 pointer-events-none"
             style={{
               left: `${sliderPosPercent}%`,
             }}

@@ -27,6 +27,12 @@ import { TapCountChallenge } from './components/challenges/TapCountChallenge';
 import { RPSChallenge } from './components/challenges/RPSChallenge';
 import { ShapeMatchChallenge } from './components/challenges/ShapeMatchChallenge';
 import { OrderSequenceChallenge } from './components/challenges/OrderSequenceChallenge';
+import { LaneActionChallenge } from './components/challenges/LaneActionChallenge';
+import { TensionMeterChallenge } from './components/challenges/TensionMeterChallenge';
+import { FloatingTargetChallenge } from './components/challenges/FloatingTargetChallenge';
+import { DoorHazardChoiceChallenge } from './components/challenges/DoorHazardChoiceChallenge';
+import { WireSwitchChallenge } from './components/challenges/WireSwitchChallenge';
+import { CodePuzzleChallenge } from './components/challenges/CodePuzzleChallenge';
 import { HomeScreen } from './components/HomeScreen';
 import { CountdownScreen } from './components/CountdownScreen';
 import { GameOverScreen } from './components/GameOverScreen';
@@ -69,10 +75,17 @@ export default function App() {
     rock_paper_scissors: 0,
     shape_match: 0,
     order_sequence: 0,
+    lane_action: 0,
+    tension_meter: 0,
+    floating_target: 0,
+    choice_hazard: 0,
+    wire_switch: 0,
+    code_puzzle: 0,
   });
 
   const timerRef = useRef<number | null>(null);
   const lastTickTimeRef = useRef<number>(performance.now());
+  const isResolvedRef = useRef<boolean>(false);
 
   const isLight = settings.colorMode === 'light';
 
@@ -85,6 +98,9 @@ export default function App() {
 
   // Handle wrong answer / game over
   const triggerGameOver = useCallback((reason: string) => {
+    if (isResolvedRef.current || isInterim) return;
+    isResolvedRef.current = true;
+
     if (timerRef.current) {
       cancelAnimationFrame(timerRef.current);
       timerRef.current = null;
@@ -109,11 +125,12 @@ export default function App() {
       setScreenShake(false);
       setScreen('GAME_OVER');
     }, 400);
-  }, [score, maxRunCombo]);
+  }, [score, maxRunCombo, isInterim]);
 
   // Handle correct answer
   const handleCorrect = useCallback(() => {
-    if (isInterim || !currentChallenge) return;
+    if (isInterim || isResolvedRef.current || !currentChallenge) return;
+    isResolvedRef.current = true;
 
     const nextScore = score + 1;
     const nextCombo = combo + 1;
@@ -150,6 +167,7 @@ export default function App() {
       const nextChal = generateNextChallenge(nextScore, currentChallenge.type);
       setCurrentChallenge(nextChal);
       setTimeRemaining(nextChal.durationMs);
+      isResolvedRef.current = false;
       setIsInterim(false);
       lastTickTimeRef.current = performance.now();
     }, 280);
@@ -214,6 +232,12 @@ export default function App() {
       rock_paper_scissors: 0,
       shape_match: 0,
       order_sequence: 0,
+      lane_action: 0,
+      tension_meter: 0,
+      floating_target: 0,
+      choice_hazard: 0,
+      wire_switch: 0,
+      code_puzzle: 0,
     };
 
     setScreen('COUNTDOWN');
@@ -224,6 +248,7 @@ export default function App() {
     const firstChallenge = generateNextChallenge(0);
     setCurrentChallenge(firstChallenge);
     setTimeRemaining(firstChallenge.durationMs);
+    isResolvedRef.current = false;
     setIsInterim(false);
     setScreen('PLAYING');
   };
@@ -450,6 +475,67 @@ export default function App() {
 
               {currentChallenge.type === 'order_sequence' && (
                 <OrderSequenceChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'lane_action' && (
+                <LaneActionChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  durationMs={currentChallenge.durationMs}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'tension_meter' && (
+                <TensionMeterChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'floating_target' && (
+                <FloatingTargetChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'choice_hazard' && (
+                <DoorHazardChoiceChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'wire_switch' && (
+                <WireSwitchChallenge
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={triggerGameOver}
+                />
+              )}
+
+              {currentChallenge.type === 'code_puzzle' && (
+                <CodePuzzleChallenge
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}

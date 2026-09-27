@@ -100,7 +100,11 @@ export const SwipeDirectionChallenge: React.FC<SwipeDirectionChallengeProps> = (
       </div>
 
       {/* Tactile D-Pad Touch Buttons for 100% Reliable Input */}
-      <div className="w-full max-w-[240px] mx-auto grid grid-cols-3 gap-2 px-2">
+      <div 
+        className="w-full max-w-[240px] mx-auto grid grid-cols-3 gap-2 px-2"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
         <div />
         <button
           type="button"
