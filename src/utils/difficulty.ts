@@ -36,9 +36,9 @@ export function getSpeedMultiplier(score: number): number {
  * while respecting a safety floor to ensure every challenge remains twitch-solvable.
  */
 export function getDynamicDuration(
-  baseDurationMs: number,
+  baseDurationMs: number = 5000,
   score: number,
-  absoluteFloorMs: number = 850
+  absoluteFloorMs: number = 1600
 ): number {
   const multiplier = getSpeedMultiplier(score);
   const scaledMs = Math.round(baseDurationMs / multiplier);

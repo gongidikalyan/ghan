@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ColorMode } from '../types/game';
 import { soundManager } from '../utils/audio';
 
@@ -13,37 +13,32 @@ export const CountdownScreen: React.FC<CountdownScreenProps> = ({
   quickCountdown,
   colorMode,
 }) => {
-  const steps = quickCountdown ? ['READY?', 'GO!'] : ['3', '2', '1', 'GO!'];
+  const steps = useMemo(
+    () => (quickCountdown ? ['READY?', 'GO!'] : ['3', '2', '1', 'GO!']),
+    [quickCountdown]
+  );
   const [index, setIndex] = useState<number>(0);
   const isLight = colorMode === 'light';
 
   useEffect(() => {
-    if (steps[0] === 'GO!') {
+    if (index >= steps.length) {
+      onComplete();
+      return;
+    }
+
+    if (steps[index] === 'GO!') {
       soundManager.playCountdownGo();
     } else {
       soundManager.playCountdownTick();
     }
 
-    const interval = setInterval(() => {
-      setIndex((prev) => {
-        const next = prev + 1;
-        if (next < steps.length) {
-          if (steps[next] === 'GO!') {
-            soundManager.playCountdownGo();
-          } else {
-            soundManager.playCountdownTick();
-          }
-          return next;
-        } else {
-          clearInterval(interval);
-          onComplete();
-          return prev;
-        }
-      });
-    }, quickCountdown ? 450 : 550);
+    const stepDuration = quickCountdown ? 450 : 550;
+    const timer = setTimeout(() => {
+      setIndex((prev) => prev + 1);
+    }, stepDuration);
 
-    return () => clearInterval(interval);
-  }, [onComplete, quickCountdown, steps]);
+    return () => clearTimeout(timer);
+  }, [index, steps, quickCountdown, onComplete]);
 
   const currentText = steps[index] || 'GO!';
   const isGo = currentText === 'GO!';

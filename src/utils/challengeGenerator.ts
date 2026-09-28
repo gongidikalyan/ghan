@@ -192,7 +192,7 @@ function generateColorTap(score: number): Challenge {
 
   const isStroop = score >= 14 && Math.random() > 0.45;
   let items: ColorTapItem[] = [];
-  const durationMs = getDynamicDuration(3500, score, 900);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   if (isStroop) {
     const otherColors = COLOR_PALETTE.filter(c => c.name !== target.name);
@@ -281,7 +281,7 @@ function generateDontTouch(score: number): Challenge {
   ];
 
   const items = shuffle(rawItems);
-  const durationMs = getDynamicDuration(3400, score, 850);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -331,7 +331,7 @@ function generateFindOdd(score: number): Challenge {
     });
   }
 
-  const durationMs = getDynamicDuration(3500, score, 950);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -376,7 +376,7 @@ function generateMemoryPosition(score: number): Challenge {
 
   const icons = ['🔴', '💎', '⭐', '⚡', '🔥', '👑', '🎯'];
   const targetIcon = icons[Math.floor(Math.random() * icons.length)];
-  const answerTimeMs = getDynamicDuration(2900, score, 1000);
+  const answerTimeMs = getDynamicDuration(4150, score, 1600);
 
   return {
     id,
@@ -401,11 +401,11 @@ function generateStopTarget(score: number): Challenge {
   const id = `stop_target_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const speedMult = getSpeedMultiplier(score);
   const targetZoneWidthPercent = Math.max(14, Math.round(28 / Math.pow(speedMult, 0.4)));
-  const speedMs = Math.max(500, Math.round(1350 / speedMult));
+  const speedMs = Math.max(700, Math.round(1800 / speedMult));
   const minStart = 15;
   const maxStart = 85 - targetZoneWidthPercent;
   const targetZoneStartPercent = Math.floor(minStart + Math.random() * (maxStart - minStart));
-  const durationMs = Math.round(speedMs * 2.7);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -439,7 +439,7 @@ function generateSwipeDirection(score: number): Challenge {
     DOWN: 'UP',
   };
   const targetDirection = isOpposite ? oppositeMap[promptDir] : promptDir;
-  const durationMs = getDynamicDuration(2800, score, 800);
+  const durationMs = getDynamicDuration(5000, score, 1600);
 
   return {
     id,
@@ -462,7 +462,7 @@ function generateSwipeDirection(score: number): Challenge {
 function generateQuickMath(score: number): Challenge {
   const id = `math_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const mode = Math.random();
-  const durationMs = getDynamicDuration(3500, score, 1100);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   if (mode < 0.4) {
     // True/False arithmetic
@@ -562,8 +562,7 @@ function generateTapCount(score: number): Challenge {
   let targetCount = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
   if (score >= 20) targetCount = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
 
-  const baseDuration = targetCount * 650 + 750;
-  const durationMs = getDynamicDuration(baseDuration, score, 900);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -605,7 +604,7 @@ function generateRPS(score: number): Challenge {
 
   const isLoseGoal = score >= 16 && Math.random() > 0.6;
   const targetChoice = isLoseGoal ? loseMap[opponentChoice] : winMap[opponentChoice];
-  const durationMs = getDynamicDuration(2900, score, 850);
+  const durationMs = getDynamicDuration(5000, score, 1600);
 
   return {
     id,
@@ -650,7 +649,7 @@ function generateShapeMatch(score: number): Challenge {
     label: s.label,
     isCorrect: s.key === targetShape.key,
   }));
-  const durationMs = getDynamicDuration(3100, score, 850);
+  const durationMs = getDynamicDuration(5000, score, 1600);
 
   return {
     id,
@@ -690,8 +689,7 @@ function generateOrderSequence(score: number): Challenge {
   }));
 
   const items = shuffle(rawItems);
-  const baseDuration = totalSteps * 850 + 700;
-  const durationMs = getDynamicDuration(baseDuration, score, 1100);
+  const durationMs = getDynamicDuration(5000, score, 2000);
 
   return {
     id,
@@ -738,7 +736,7 @@ function generateLaneAction(score: number): Challenge {
     targetLane = Math.floor(Math.random() * laneCount);
   }
 
-  const durationMs = getDynamicDuration(2900, score, 950);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -781,12 +779,10 @@ function generateTensionMeter(score: number): Challenge {
 
   const picked = meterModes[Math.floor(Math.random() * meterModes.length)];
   const speedMult = getSpeedMultiplier(score);
-  let speed = Math.max(450, Math.round(picked.speed / speedMult));
-  let zoneWidth = Math.max(10, Math.round(picked.zoneWidth / Math.pow(speedMult, 0.4)));
+  let speed = Math.max(600, Math.round((picked.speed * 1.35) / speedMult));
+  let zoneWidth = Math.max(12, Math.round(picked.zoneWidth / Math.pow(speedMult, 0.4)));
 
-  const durationMs = picked.isMash 
-    ? getDynamicDuration(2700, score, 1300) 
-    : Math.round(speed * 2.7);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -860,7 +856,7 @@ function generateFloatingTarget(score: number): Challenge {
     },
   ];
 
-  const durationMs = getDynamicDuration(3300, score, 950);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -1001,7 +997,7 @@ function generateChoiceHazard(score: number): Challenge {
 
   const picked = scenarios[Math.floor(Math.random() * scenarios.length)];
   const shuffledOptions = shuffle(picked.options);
-  const durationMs = getDynamicDuration(3300, score, 950);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -1102,7 +1098,7 @@ function generateWireSwitch(score: number): Challenge {
   ];
 
   const picked = switchModes[Math.floor(Math.random() * switchModes.length)];
-  const durationMs = getDynamicDuration(3200, score, 900);
+  const durationMs = getDynamicDuration(5000, score, 1800);
 
   return {
     id,
@@ -1194,7 +1190,7 @@ function generateCodePuzzle(score: number): Challenge {
 
   const picked = puzzleModes[Math.floor(Math.random() * puzzleModes.length)];
   const shuffledOptions = shuffle(picked.options);
-  const durationMs = getDynamicDuration(3400, score, 1000);
+  const durationMs = getDynamicDuration(5000, score, 2000);
 
   return {
     id,
