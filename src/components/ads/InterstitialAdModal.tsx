@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, ShieldCheck, Volume2, VolumeX, Sparkles } from 'lucide-react';
 import { ColorMode } from '../../types/game';
+import { ADMOB_CONFIG } from '../../config/admob';
 
 interface InterstitialAdModalProps {
   isOpen: boolean;
@@ -195,8 +196,8 @@ export const InterstitialAdModal: React.FC<InterstitialAdModalProps> = ({
             </button>
             <div className="flex items-center justify-between text-[10px] text-white/50 mt-2 px-1 font-mono">
               <span>Google AdMob • Interstitial</span>
-              <span className="truncate max-w-[170px]" title="ca-app-pub-5776267944392683/8620193138">
-                8620193138
+              <span className="truncate max-w-[170px]">
+                {ADMOB_CONFIG.interstitialAdUnitId ? ADMOB_CONFIG.interstitialAdUnitId.split('/').pop() : 'Sponsored'}
               </span>
             </div>
           </div>

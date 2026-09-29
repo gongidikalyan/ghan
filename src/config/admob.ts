@@ -1,18 +1,26 @@
 /**
  * Google AdMob & AdSense for Games (H5) Configuration.
+ * Ads are disabled during the Closed Testing phase to prevent accidental
+ * tester clicks and account policy violations.
  */
 
 export const ADMOB_CONFIG = {
-  appId: import.meta.env.VITE_ADMOB_APP_ID || 'ca-app-pub-5776267944392683~3263090526',
-  interstitialAdUnitId: import.meta.env.VITE_ADMOB_INTERSTITIAL_ID || 'ca-app-pub-5776267944392683/8620193138',
-  publisherId: 'ca-app-pub-5776267944392683',
+  appId: import.meta.env.VITE_ADMOB_APP_ID || '',
+  interstitialAdUnitId: import.meta.env.VITE_ADMOB_INTERSTITIAL_ID || '',
+  publisherId: '',
+  // Ads are only enabled when an Interstitial Ad Unit ID is explicitly configured
+  isAdsEnabled: Boolean(import.meta.env.VITE_ADMOB_INTERSTITIAL_ID && import.meta.env.VITE_ADMOB_INTERSTITIAL_ID.trim() !== ''),
 } as const;
 
 /**
- * Triggers native or H5 Ad placement if available in environment,
- * returns true if native handled it, or false to use in-app interstitial player.
+ * Triggers native or H5 Ad placement if available and enabled.
+ * Returns true if native handled it, or false.
  */
 export async function showPlatformAd(): Promise<boolean> {
+  if (!ADMOB_CONFIG.isAdsEnabled) {
+    return false;
+  }
+
   const win = window as any;
 
   // 1. Google H5 Game Ad Placement API (adBreak) if configured on web
@@ -48,6 +56,5 @@ export async function showPlatformAd(): Promise<boolean> {
     }
   }
 
-  // Default: Return false so App.tsx displays the high-fidelity in-app interstitial modal
   return false;
 }

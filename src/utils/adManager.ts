@@ -1,3 +1,5 @@
+import { ADMOB_CONFIG } from '../config/admob';
+
 /**
  * AdManager handles frequency capping, eligibility criteria, and tracking
  * for post-game interstitial ads according to strict retention rules.
@@ -77,6 +79,11 @@ class AdManager {
    * 4. Or trigger after at least 2.5 minutes (150 seconds) of total active playtime.
    */
   public shouldShowInterstitial(runScore: number): boolean {
+    // If ads are disabled (testing phase / no keys), never show ads
+    if (!ADMOB_CONFIG.isAdsEnabled) {
+      return false;
+    }
+
     // Rule 1: Never on Run 1
     if (this.metrics.totalRunsCompleted <= 1) {
       return false;
