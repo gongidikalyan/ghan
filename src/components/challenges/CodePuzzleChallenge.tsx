@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { KeyRound, Check, RefreshCw } from 'lucide-react';
 import { ColorMode, CodePuzzlePayload } from '../../types/game';
 import { soundManager } from '../../utils/audio';
@@ -22,6 +22,7 @@ export const CodePuzzleChallenge: React.FC<CodePuzzleChallengeProps> = ({
   const { subType, displayCode, flashMs, options } = payload;
   const isLight = colorMode === 'light';
   const [isRevealed, setIsRevealed] = useState<boolean>(true);
+  const isAnsweredRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (flashMs > 0) {
@@ -33,6 +34,9 @@ export const CodePuzzleChallenge: React.FC<CodePuzzleChallengeProps> = ({
   }, [flashMs]);
 
   const handleSelect = (option: typeof options[0]) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (option.isCorrect) {
       soundManager.playTap();
       hapticManager.lightTap();

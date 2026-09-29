@@ -49,7 +49,8 @@ export const LaneActionChallenge: React.FC<LaneActionChallengeProps> = ({
   useEffect(() => {
     resolvedRef.current = false;
     const startTime = performance.now();
-    const duration = Math.max(650, Math.round(durationMs * 0.75));
+    // Fast, responsive fall duration (1.4s - 2.0s) so it resolves well within the 6.0s game timer
+    const duration = Math.min(2000, Math.max(1400, Math.round(durationMs * 0.35)));
 
     const animate = (now: number) => {
       if (resolvedRef.current) return;

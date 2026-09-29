@@ -34,6 +34,7 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
   const [gaugePercent, setGaugePercent] = useState<number>(0);
   const [mashCount, setMashCount] = useState<number>(0);
   const [hasStopped, setHasStopped] = useState<boolean>(false);
+  const hasStoppedRef = useRef<boolean>(false);
   const animRef = useRef<number | null>(null);
   const positionRef = useRef<number>(0);
 
@@ -44,6 +45,7 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
     let startTime = performance.now();
 
     const tick = (now: number) => {
+      if (hasStoppedRef.current) return;
       const elapsed = (now - startTime) % speedMs;
 
       // Triangle wave back and forth
@@ -64,7 +66,7 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
 
   // Handle tap for timing stop or rapid mash
   const handleStopTap = () => {
-    if (hasStopped) return;
+    if (hasStoppedRef.current) return;
 
     if (meterType === 'rapid_mash') {
       const next = mashCount + 1;
@@ -73,10 +75,12 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
       hapticManager.lightTap();
 
       if (next >= mashTargetTaps) {
+        hasStoppedRef.current = true;
         setHasStopped(true);
         onCorrect();
       }
     } else {
+      hasStoppedRef.current = true;
       setHasStopped(true);
       if (animRef.current) cancelAnimationFrame(animRef.current);
 

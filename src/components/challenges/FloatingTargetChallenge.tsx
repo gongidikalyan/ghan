@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ColorMode, FloatingItem, FloatingTargetPayload } from '../../types/game';
 import { soundManager } from '../../utils/audio';
 import { hapticManager } from '../../utils/haptics';
@@ -21,11 +21,13 @@ export const FloatingTargetChallenge: React.FC<FloatingTargetChallengeProps> = (
   const { subType, items, requiredPops, targetDescription } = payload;
   const isLight = colorMode === 'light';
   const [poppedIds, setPoppedIds] = useState<string[]>([]);
+  const isResolvedRef = useRef<boolean>(false);
 
   const handleItemClick = (item: FloatingItem) => {
-    if (poppedIds.includes(item.id)) return;
+    if (isResolvedRef.current || poppedIds.includes(item.id)) return;
 
     if (!item.isTarget) {
+      isResolvedRef.current = true;
       onWrong(`Tapped the wrong item (${item.label || 'hazard'})!`);
       return;
     }
@@ -37,6 +39,7 @@ export const FloatingTargetChallenge: React.FC<FloatingTargetChallengeProps> = (
     setPoppedIds(nextPopped);
 
     if (nextPopped.length >= requiredPops) {
+      isResolvedRef.current = true;
       onCorrect();
     }
   };

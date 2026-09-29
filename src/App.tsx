@@ -39,6 +39,9 @@ import { GameOverScreen } from './components/GameOverScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
+import { InterstitialAdModal } from './components/ads/InterstitialAdModal';
+import { adManager } from './utils/adManager';
+import { showPlatformAd } from './config/admob';
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
@@ -86,6 +89,11 @@ export default function App() {
   const timerRef = useRef<number | null>(null);
   const lastTickTimeRef = useRef<number>(performance.now());
   const isResolvedRef = useRef<boolean>(false);
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const [inputLocked, setInputLocked] = useState<boolean>(false);
+  const runStartTimeRef = useRef<number>(performance.now());
+  const [isAdOpen, setIsAdOpen] = useState<boolean>(false);
+  const pendingPostGameOverActionRef = useRef<'RETRY' | 'HOME' | null>(null);
 
   const isLight = settings.colorMode === 'light';
 
@@ -100,10 +108,18 @@ export default function App() {
   const triggerGameOver = useCallback((reason: string) => {
     if (isResolvedRef.current || isInterim) return;
     isResolvedRef.current = true;
+    setInputLocked(true);
+
+    const runDurationMs = performance.now() - runStartTimeRef.current;
+    adManager.recordRunCompleted(score, runDurationMs);
 
     if (timerRef.current) {
       cancelAnimationFrame(timerRef.current);
       timerRef.current = null;
+    }
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
     }
 
     soundManager.playWrong();
@@ -131,6 +147,7 @@ export default function App() {
   const handleCorrect = useCallback(() => {
     if (isInterim || isResolvedRef.current || !currentChallenge) return;
     isResolvedRef.current = true;
+    setInputLocked(true);
 
     const nextScore = score + 1;
     const nextCombo = combo + 1;
@@ -162,15 +179,24 @@ export default function App() {
       timerRef.current = null;
     }
 
-    setTimeout(() => {
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
       setInterimSuccess(false);
       const nextChal = generateNextChallenge(nextScore, currentChallenge.type);
       setCurrentChallenge(nextChal);
       setTimeRemaining(nextChal.durationMs);
-      isResolvedRef.current = false;
       setIsInterim(false);
       lastTickTimeRef.current = performance.now();
-    }, 280);
+
+      // Generous grace period so previous touch release never triggers new challenge buttons
+      window.setTimeout(() => {
+        isResolvedRef.current = false;
+        setInputLocked(false);
+      }, 90);
+    }, 240);
   }, [isInterim, currentChallenge, score, combo, maxRunCombo]);
 
   // Timer loop when PLAYING
@@ -215,6 +241,14 @@ export default function App() {
   // Start new run
   const startNewRun = () => {
     soundManager.init();
+    runStartTimeRef.current = performance.now();
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    isResolvedRef.current = false;
+    setInputLocked(false);
+    setIsInterim(false);
     setScore(0);
     setCombo(0);
     setMaxRunCombo(0);
@@ -241,6 +275,49 @@ export default function App() {
     };
 
     setScreen('COUNTDOWN');
+  };
+
+  // Post-Game Over navigation hooks with frequency-capped interstitial ads
+  const handleGameOverRetry = async () => {
+    if (adManager.shouldShowInterstitial(score)) {
+      adManager.recordAdShown();
+      const nativeHandled = await showPlatformAd();
+      if (!nativeHandled) {
+        pendingPostGameOverActionRef.current = 'RETRY';
+        setIsAdOpen(true);
+      } else {
+        startNewRun();
+      }
+    } else {
+      startNewRun();
+    }
+  };
+
+  const handleGameOverHome = async () => {
+    if (adManager.shouldShowInterstitial(score)) {
+      adManager.recordAdShown();
+      const nativeHandled = await showPlatformAd();
+      if (!nativeHandled) {
+        pendingPostGameOverActionRef.current = 'HOME';
+        setIsAdOpen(true);
+      } else {
+        setScreen('HOME');
+      }
+    } else {
+      setScreen('HOME');
+    }
+  };
+
+  const handleAdClosed = () => {
+    setIsAdOpen(false);
+    const pendingAction = pendingPostGameOverActionRef.current;
+    pendingPostGameOverActionRef.current = null;
+
+    if (pendingAction === 'RETRY') {
+      startNewRun();
+    } else if (pendingAction === 'HOME') {
+      setScreen('HOME');
+    }
   };
 
   // Called when countdown finishes
@@ -372,9 +449,10 @@ export default function App() {
             />
 
             {/* Active Challenge Screen */}
-            <div className="flex-1 w-full flex flex-col justify-center items-center">
+            <div className={`flex-1 w-full flex flex-col justify-center items-center ${(isInterim || inputLocked) ? 'pointer-events-none' : ''}`}>
               {currentChallenge.type === 'color_tap' && (
                 <ColorTapChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -385,6 +463,7 @@ export default function App() {
 
               {currentChallenge.type === 'dont_touch' && (
                 <DontTouchChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -395,6 +474,7 @@ export default function App() {
 
               {currentChallenge.type === 'find_odd' && (
                 <FindOddChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -405,6 +485,7 @@ export default function App() {
 
               {currentChallenge.type === 'memory_position' && (
                 <MemoryPositionChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -415,6 +496,7 @@ export default function App() {
 
               {currentChallenge.type === 'stop_target' && (
                 <StopTargetChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -425,6 +507,7 @@ export default function App() {
 
               {currentChallenge.type === 'swipe_direction' && (
                 <SwipeDirectionChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -435,6 +518,7 @@ export default function App() {
 
               {currentChallenge.type === 'quick_math' && (
                 <QuickMathChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -445,6 +529,7 @@ export default function App() {
 
               {currentChallenge.type === 'tap_count' && (
                 <TapCountChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -455,6 +540,7 @@ export default function App() {
 
               {currentChallenge.type === 'rock_paper_scissors' && (
                 <RPSChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -465,6 +551,7 @@ export default function App() {
 
               {currentChallenge.type === 'shape_match' && (
                 <ShapeMatchChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -475,6 +562,7 @@ export default function App() {
 
               {currentChallenge.type === 'order_sequence' && (
                 <OrderSequenceChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -485,6 +573,7 @@ export default function App() {
 
               {currentChallenge.type === 'lane_action' && (
                 <LaneActionChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -496,6 +585,7 @@ export default function App() {
 
               {currentChallenge.type === 'tension_meter' && (
                 <TensionMeterChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -506,6 +596,7 @@ export default function App() {
 
               {currentChallenge.type === 'floating_target' && (
                 <FloatingTargetChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -516,6 +607,7 @@ export default function App() {
 
               {currentChallenge.type === 'choice_hazard' && (
                 <DoorHazardChoiceChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -526,6 +618,7 @@ export default function App() {
 
               {currentChallenge.type === 'wire_switch' && (
                 <WireSwitchChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -536,6 +629,7 @@ export default function App() {
 
               {currentChallenge.type === 'code_puzzle' && (
                 <CodePuzzleChallenge
+                  key={currentChallenge.id}
                   payload={currentChallenge.payload.data as any}
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
@@ -556,8 +650,8 @@ export default function App() {
             maxCombo={maxRunCombo}
             reason={gameOverReason}
             colorMode={settings.colorMode}
-            onRetry={startNewRun}
-            onHome={() => setScreen('HOME')}
+            onRetry={handleGameOverRetry}
+            onHome={handleGameOverHome}
           />
         )}
       </div>
@@ -582,6 +676,13 @@ export default function App() {
         isOpen={isRulesOpen}
         colorMode={settings.colorMode}
         onClose={() => setIsRulesOpen(false)}
+      />
+
+      {/* Post-Game Over Interstitial Ad */}
+      <InterstitialAdModal
+        isOpen={isAdOpen}
+        colorMode={settings.colorMode}
+        onClose={handleAdClosed}
       />
     </div>
   );

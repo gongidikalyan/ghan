@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, QuickMathPayload } from '../../types/game';
 
 interface QuickMathChallengeProps {
@@ -18,8 +18,12 @@ export const QuickMathChallenge: React.FC<QuickMathChallengeProps> = ({
 }) => {
   const { question, options, explanation } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleOptionClick = (option: typeof options[0]) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (option.isCorrect) {
       onCorrect();
     } else {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, ChoiceHazardPayload, ChoiceOption } from '../../types/game';
 import { soundManager } from '../../utils/audio';
 import { hapticManager } from '../../utils/haptics';
@@ -20,8 +20,12 @@ export const DoorHazardChoiceChallenge: React.FC<DoorHazardChoiceChallengeProps>
 }) => {
   const { question, options, clue } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleSelect = (option: ChoiceOption) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (option.isCorrect) {
       soundManager.playTap();
       hapticManager.lightTap();

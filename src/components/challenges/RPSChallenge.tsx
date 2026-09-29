@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, RPSChoice, RPSPayload } from '../../types/game';
 
 interface RPSChallengeProps {
@@ -24,10 +24,14 @@ export const RPSChallenge: React.FC<RPSChallengeProps> = ({
 }) => {
   const { opponentChoice, targetChoice, goal } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const choices: RPSChoice[] = ['ROCK', 'PAPER', 'SCISSORS'];
 
   const handleChoice = (choice: RPSChoice) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (choice === targetChoice) {
       onCorrect();
     } else {

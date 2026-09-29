@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, ShapeItem, ShapeMatchPayload } from '../../types/game';
 
 interface ShapeMatchChallengeProps {
@@ -71,8 +71,12 @@ export const ShapeMatchChallenge: React.FC<ShapeMatchChallengeProps> = ({
 }) => {
   const { targetShapeLabel, items } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleShapeClick = (item: ShapeItem) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (item.isCorrect) {
       onCorrect();
     } else {

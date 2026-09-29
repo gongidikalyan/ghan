@@ -20,8 +20,12 @@ export const SwipeDirectionChallenge: React.FC<SwipeDirectionChallengeProps> = (
   const { promptDirection, targetDirection, isOppositeRule } = payload;
   const isLight = colorMode === 'light';
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleDirectionSubmit = (dir: Direction) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (dir === targetDirection) {
       onCorrect();
     } else {

@@ -21,12 +21,13 @@ export const StopTargetChallenge: React.FC<StopTargetChallengeProps> = ({
   const isLight = colorMode === 'light';
   const [sliderPosPercent, setSliderPosPercent] = useState<number>(0);
   const [hasStopped, setHasStopped] = useState<boolean>(false);
+  const hasStoppedRef = useRef<boolean>(false);
   const animFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(performance.now());
   const currentPosRef = useRef<number>(0);
 
   const updateSlider = useCallback(() => {
-    if (hasStopped) return;
+    if (hasStoppedRef.current) return;
     const now = performance.now();
     const elapsed = now - startTimeRef.current;
     
@@ -38,7 +39,7 @@ export const StopTargetChallenge: React.FC<StopTargetChallengeProps> = ({
     setSliderPosPercent(percent);
 
     animFrameRef.current = requestAnimationFrame(updateSlider);
-  }, [hasStopped, speedMs]);
+  }, [speedMs]);
 
   useEffect(() => {
     startTimeRef.current = performance.now();
@@ -52,7 +53,8 @@ export const StopTargetChallenge: React.FC<StopTargetChallengeProps> = ({
   }, [updateSlider]);
 
   const handleStopAction = () => {
-    if (hasStopped) return;
+    if (hasStoppedRef.current) return;
+    hasStoppedRef.current = true;
     setHasStopped(true);
 
     if (animFrameRef.current) {

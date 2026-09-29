@@ -24,21 +24,21 @@ export interface DifficultyInfo {
 export function getSpeedMultiplier(score: number): number {
   if (score <= 0) return 1.0;
   
-  // Power curve with asymptotic soft cap at 2.85x
-  const baseGrowth = Math.pow(score, 0.65) * 0.14;
+  // Gentle power curve capped at 1.70x to ensure challenges remain comfortably solvable
+  const baseGrowth = Math.pow(score, 0.5) * 0.07;
   const rawMultiplier = 1.0 + baseGrowth;
-  return Math.min(2.85, Math.round(rawMultiplier * 100) / 100);
+  return Math.min(1.70, Math.round(rawMultiplier * 100) / 100);
 }
 
 /**
  * Calculates the dynamic challenge time limit in milliseconds.
- * Applies the speed multiplier against the challenge's base time,
- * while respecting a safety floor to ensure every challenge remains twitch-solvable.
+ * Applies the speed multiplier against the challenge's base time (6000ms),
+ * while respecting a safety floor of 3500ms to ensure the player is never unfairly timed out.
  */
 export function getDynamicDuration(
-  baseDurationMs: number = 5000,
+  baseDurationMs: number = 6000,
   score: number,
-  absoluteFloorMs: number = 1600
+  absoluteFloorMs: number = 3500
 ): number {
   const multiplier = getSpeedMultiplier(score);
   const scaledMs = Math.round(baseDurationMs / multiplier);

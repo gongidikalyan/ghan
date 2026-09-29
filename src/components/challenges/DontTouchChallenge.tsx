@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, DontTouchPayload } from '../../types/game';
 
 interface DontTouchChallengeProps {
@@ -18,8 +18,12 @@ export const DontTouchChallenge: React.FC<DontTouchChallengeProps> = ({
 }) => {
   const { items, forbiddenLabel, forbiddenIconName } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleItemClick = (item: typeof items[0]) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (item.isForbidden) {
       onWrong(`You touched the forbidden ${forbiddenIconName} ${forbiddenLabel}!`);
     } else {

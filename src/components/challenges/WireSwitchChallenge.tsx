@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ColorMode, WireSwitchItem, WireSwitchPayload } from '../../types/game';
 import { soundManager } from '../../utils/audio';
 import { hapticManager } from '../../utils/haptics';
@@ -21,8 +21,12 @@ export const WireSwitchChallenge: React.FC<WireSwitchChallengeProps> = ({
   const { subType, prompt, items } = payload;
   const isLight = colorMode === 'light';
   const [activeItems, setActiveItems] = useState<WireSwitchItem[]>(items);
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleAction = (item: WireSwitchItem) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (item.isTargetAction) {
       soundManager.playTap();
       hapticManager.lightTap();

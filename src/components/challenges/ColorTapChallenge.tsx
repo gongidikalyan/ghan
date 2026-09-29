@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, ColorTapPayload } from '../../types/game';
 
 interface ColorTapChallengeProps {
@@ -18,8 +18,12 @@ export const ColorTapChallenge: React.FC<ColorTapChallengeProps> = ({
 }) => {
   const { items, targetColorName, isStroop } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleItemClick = (item: typeof items[0]) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (item.isCorrect) {
       onCorrect();
     } else {

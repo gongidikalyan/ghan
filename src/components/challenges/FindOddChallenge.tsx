@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ColorMode, FindOddPayload } from '../../types/game';
 
 interface FindOddChallengeProps {
@@ -18,8 +18,12 @@ export const FindOddChallenge: React.FC<FindOddChallengeProps> = ({
 }) => {
   const { items, gridCols, oddDescription } = payload;
   const isLight = colorMode === 'light';
+  const isAnsweredRef = useRef<boolean>(false);
 
   const handleItemClick = (item: typeof items[0]) => {
+    if (isAnsweredRef.current) return;
+    isAnsweredRef.current = true;
+
     if (item.isOdd) {
       onCorrect();
     } else {
