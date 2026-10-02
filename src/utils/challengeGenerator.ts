@@ -180,7 +180,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 // 1. Color Tap
-function generateColorTap(score: number): Challenge {
+function generateColorTap(score: number, forceStroop?: boolean): Challenge {
   const id = `color_tap_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   let itemCount = 3;
   if (score >= 25) itemCount = 6;
@@ -190,7 +190,7 @@ function generateColorTap(score: number): Challenge {
   const targetIndex = Math.floor(Math.random() * itemCount);
   const target = shuffledColors[targetIndex];
 
-  const isStroop = score >= 14 && Math.random() > 0.45;
+  const isStroop = forceStroop !== undefined ? forceStroop : (score >= 14 && Math.random() > 0.45);
   let items: ColorTapItem[] = [];
   const durationMs = getDynamicDuration(6000, score, 3500);
 
@@ -252,9 +252,11 @@ function generateColorTap(score: number): Challenge {
 }
 
 // 2. Don't Touch
-function generateDontTouch(score: number): Challenge {
+function generateDontTouch(score: number, forcedCategory?: string): Challenge {
   const id = `dont_touch_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const chosenSet = EMOJI_SETS[Math.floor(Math.random() * EMOJI_SETS.length)];
+  const chosenSet = forcedCategory
+    ? EMOJI_SETS.find(s => s.category === forcedCategory) || EMOJI_SETS[0]
+    : EMOJI_SETS[Math.floor(Math.random() * EMOJI_SETS.length)];
   const forbiddenObj = chosenSet.forbiddenList[Math.floor(Math.random() * chosenSet.forbiddenList.length)];
 
   let totalItems = 4;
@@ -301,9 +303,11 @@ function generateDontTouch(score: number): Challenge {
 }
 
 // 3. Find The Odd One
-function generateFindOdd(score: number): Challenge {
+function generateFindOdd(score: number, forcedPairIndex?: number): Challenge {
   const id = `find_odd_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const pair = ODD_EMOJI_PAIRS[Math.floor(Math.random() * ODD_EMOJI_PAIRS.length)];
+  const pair = forcedPairIndex !== undefined
+    ? ODD_EMOJI_PAIRS[forcedPairIndex % ODD_EMOJI_PAIRS.length]
+    : ODD_EMOJI_PAIRS[Math.floor(Math.random() * ODD_EMOJI_PAIRS.length)];
 
   let totalItems = 4;
   let gridCols = 2;
@@ -351,20 +355,22 @@ function generateFindOdd(score: number): Challenge {
 }
 
 // 4. Memory Position
-function generateMemoryPosition(score: number): Challenge {
+function generateMemoryPosition(score: number, forcedGridSize?: number): Challenge {
   const id = `memory_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  let gridSize = 3;
+  let gridSize = forcedGridSize || 3;
   let targetCount = 1;
   let flashDurationMs = 850;
 
-  if (score >= 25) {
-    gridSize = 4;
-    targetCount = 2;
-    flashDurationMs = 550;
-  } else if (score >= 14) {
-    gridSize = 3;
-    targetCount = 2;
-    flashDurationMs = 650;
+  if (!forcedGridSize) {
+    if (score >= 25) {
+      gridSize = 4;
+      targetCount = 2;
+      flashDurationMs = 550;
+    } else if (score >= 14) {
+      gridSize = 3;
+      targetCount = 2;
+      flashDurationMs = 650;
+    }
   }
 
   const totalTiles = gridSize * gridSize;
@@ -425,13 +431,13 @@ function generateStopTarget(score: number): Challenge {
 }
 
 // 6. Swipe Direction
-function generateSwipeDirection(score: number): Challenge {
+function generateSwipeDirection(score: number, forcedOpposite?: boolean): Challenge {
   const id = `swipe_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const dirs: Direction[] = ['LEFT', 'RIGHT', 'UP', 'DOWN'];
   const promptDir = dirs[Math.floor(Math.random() * dirs.length)];
   
-  // Opposite rule at score >= 12
-  const isOpposite = score >= 12 && Math.random() > 0.5;
+  // Opposite rule at score >= 12 or if forced
+  const isOpposite = forcedOpposite !== undefined ? forcedOpposite : (score >= 12 && Math.random() > 0.5);
   const oppositeMap: Record<Direction, Direction> = {
     LEFT: 'RIGHT',
     RIGHT: 'LEFT',
@@ -459,12 +465,13 @@ function generateSwipeDirection(score: number): Challenge {
 }
 
 // 7. Quick Math
-function generateQuickMath(score: number): Challenge {
+function generateQuickMath(score: number, forcedMode?: 'true_false' | 'parity' | 'comparison'): Challenge {
   const id = `math_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const mode = Math.random();
+  const rand = Math.random();
+  const mode = forcedMode || (rand < 0.4 ? 'true_false' : rand < 0.7 ? 'parity' : 'comparison');
   const durationMs = getDynamicDuration(6000, score, 3500);
 
-  if (mode < 0.4) {
+  if (mode === 'true_false') {
     // True/False arithmetic
     const a = Math.floor(Math.random() * 8) + 2;
     const b = Math.floor(Math.random() * 8) + 2;
@@ -493,7 +500,7 @@ function generateQuickMath(score: number): Challenge {
         },
       },
     };
-  } else if (mode < 0.7) {
+  } else if (mode === 'parity') {
     // Tap Even or Odd
     const askEven = Math.random() > 0.5;
     const evenNum = (Math.floor(Math.random() * 20) + 2) * 2;
@@ -557,10 +564,10 @@ function generateQuickMath(score: number): Challenge {
 }
 
 // 8. Tap Count
-function generateTapCount(score: number): Challenge {
+function generateTapCount(score: number, forcedCount?: number): Challenge {
   const id = `tap_count_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  let targetCount = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
-  if (score >= 20) targetCount = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+  let targetCount = forcedCount || (Math.floor(Math.random() * 3) + 2); // 2, 3, or 4
+  if (!forcedCount && score >= 20) targetCount = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
 
   const durationMs = getDynamicDuration(6000, score, 3500);
 
@@ -580,7 +587,7 @@ function generateTapCount(score: number): Challenge {
 }
 
 // 9. Rock Paper Scissors
-function generateRPS(score: number): Challenge {
+function generateRPS(score: number, forcedLoseGoal?: boolean): Challenge {
   const id = `rps_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const choices: RPSChoice[] = ['ROCK', 'PAPER', 'SCISSORS'];
   const opponentChoice = choices[Math.floor(Math.random() * choices.length)];
@@ -602,7 +609,7 @@ function generateRPS(score: number): Challenge {
     SCISSORS: 'PAPER',
   };
 
-  const isLoseGoal = score >= 16 && Math.random() > 0.6;
+  const isLoseGoal = forcedLoseGoal !== undefined ? forcedLoseGoal : (score >= 16 && Math.random() > 0.6);
   const targetChoice = isLoseGoal ? loseMap[opponentChoice] : winMap[opponentChoice];
   const durationMs = getDynamicDuration(6000, score, 3500);
 
@@ -669,14 +676,14 @@ function generateShapeMatch(score: number): Challenge {
 }
 
 // 11. Order Sequence
-function generateOrderSequence(score: number): Challenge {
+function generateOrderSequence(score: number, forcedAlphabet?: boolean): Challenge {
   const id = `order_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const totalSteps = score >= 20 ? 4 : 3;
 
-  const mode = Math.random();
+  const isAlpha = forcedAlphabet !== undefined ? forcedAlphabet : Math.random() >= 0.6;
   let stepLabels: string[] = [];
 
-  if (mode < 0.6) {
+  if (!isAlpha) {
     stepLabels = totalSteps === 4 ? ['1', '2', '3', '4'] : ['1', '2', '3'];
   } else {
     stepLabels = totalSteps === 4 ? ['A', 'B', 'C', 'D'] : ['A', 'B', 'C'];
@@ -708,7 +715,7 @@ function generateOrderSequence(score: number): Challenge {
 }
 
 // 12. Lane Action (Knife Dodge, Meteor Dodge, Catch Star, Coin Catch, Laser Dodge, Falling Object, Magnetic Maze)
-function generateLaneAction(score: number): Challenge {
+function generateLaneAction(score: number, forcedSubType?: string): Challenge {
   const id = `lane_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const subTypes = [
     { type: 'knife_dodge', title: 'KNIFE DODGE', instruction: 'AVOID THE KNIVES!', player: '🏃', hazard: '🔪', mode: 'dodge' as const, hint: 'Step into the safe lane!' },
@@ -720,7 +727,9 @@ function generateLaneAction(score: number): Challenge {
     { type: 'falling_object', title: 'FALLING OBJECT', instruction: 'CATCH THE DIAMOND!', player: '🧤', target: '💎', mode: 'catch' as const, hint: 'Catch the rare gem!' },
   ];
 
-  const picked = subTypes[Math.floor(Math.random() * subTypes.length)];
+  const picked = forcedSubType
+    ? subTypes.find(s => s.type === forcedSubType) || subTypes[0]
+    : subTypes[Math.floor(Math.random() * subTypes.length)];
   const laneCount = 3;
   const initialPlayerLane = 1; // Center lane
 
@@ -762,7 +771,7 @@ function generateLaneAction(score: number): Challenge {
 }
 
 // 13. Tension Meter (Bullseye, Rocket Launch/Landing, Knife Throw, Bottle Flip, Power Charge, Tug of War, Temperature, Balance, Wind)
-function generateTensionMeter(score: number): Challenge {
+function generateTensionMeter(score: number, forcedSubType?: string): Challenge {
   const id = `meter_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const meterModes = [
     { subType: 'bullseye', title: 'BULLSEYE', instruction: 'STOP POINTER IN CENTER!', icon: '🎯', zoneStart: 42, zoneWidth: 20, speed: 1100, label: 'Hit the center bullseye!' },
@@ -777,7 +786,9 @@ function generateTensionMeter(score: number): Challenge {
     { subType: 'wind_control', title: 'WIND CONTROL', instruction: 'ALIGN PARACHUTE WITH WIND!', icon: '🌬️', zoneStart: 38, zoneWidth: 22, speed: 1100, label: 'Adjust flap angle!' },
   ];
 
-  const picked = meterModes[Math.floor(Math.random() * meterModes.length)];
+  const picked = forcedSubType
+    ? meterModes.find(m => m.subType === forcedSubType) || meterModes[0]
+    : meterModes[Math.floor(Math.random() * meterModes.length)];
   const speedMult = getSpeedMultiplier(score);
   let speed = Math.max(600, Math.round((picked.speed * 1.35) / speedMult));
   let zoneWidth = Math.max(12, Math.round(picked.zoneWidth / Math.pow(speedMult, 0.4)));
@@ -807,7 +818,7 @@ function generateTensionMeter(score: number): Challenge {
 }
 
 // 14. Floating Target (Pop Bubbles, Balloon Burst, Moving Target, Final Target, Avoid Bomb, Spot Crack)
-function generateFloatingTarget(score: number): Challenge {
+function generateFloatingTarget(score: number, forcedSubType?: string): Challenge {
   const id = `float_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const modes = [
     { subType: 'pop_bubbles', title: 'POP THE BUBBLES', instruction: 'POP THE GREEN BUBBLE!', targetIcon: '🫧', hazardIcon: '⚪', desc: 'Pop green target bubble' },
@@ -818,7 +829,9 @@ function generateFloatingTarget(score: number): Challenge {
     { subType: 'spot_crack', title: 'SPOT THE CRACK', instruction: 'TAP THE CRACKED SHELL 🐣!', targetIcon: '🐣', hazardIcon: '🥚', desc: 'Tap cracked item' },
   ];
 
-  const picked = modes[Math.floor(Math.random() * modes.length)];
+  const picked = forcedSubType
+    ? modes.find(m => m.subType === forcedSubType) || modes[0]
+    : modes[Math.floor(Math.random() * modes.length)];
 
   // Create 3 floating positions
   const positions = [
@@ -878,7 +891,7 @@ function generateFloatingTarget(score: number): Challenge {
 }
 
 // 15. Choice Hazard (Which Door?, Trap Door, Safe Tile, Floor Is Lava, Portal Match, Teleport Choice, Key & Lock, Escape Box, Shadow Match, Color Pour, Magnet Match)
-function generateChoiceHazard(score: number): Challenge {
+function generateChoiceHazard(score: number, forcedSubType?: string): Challenge {
   const id = `choice_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const scenarios = [
     {
@@ -995,7 +1008,9 @@ function generateChoiceHazard(score: number): Challenge {
     },
   ];
 
-  const picked = scenarios[Math.floor(Math.random() * scenarios.length)];
+  const picked = forcedSubType
+    ? scenarios.find(s => s.subType === forcedSubType) || scenarios[0]
+    : scenarios[Math.floor(Math.random() * scenarios.length)];
   const shuffledOptions = shuffle(picked.options);
   const durationMs = getDynamicDuration(6000, score, 3500);
 
@@ -1018,7 +1033,7 @@ function generateChoiceHazard(score: number): Challenge {
 }
 
 // 16. Wire Switch (Bomb Defuse, Wire Connect, Light Switch, Train Switch, Traffic Control, Pipe Connect, Gear Match, Shape Rotation)
-function generateWireSwitch(score: number): Challenge {
+function generateWireSwitch(score: number, forcedSubType?: string): Challenge {
   const id = `wire_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const switchModes = [
     {
@@ -1097,7 +1112,9 @@ function generateWireSwitch(score: number): Challenge {
     },
   ];
 
-  const picked = switchModes[Math.floor(Math.random() * switchModes.length)];
+  const picked = forcedSubType
+    ? switchModes.find(s => s.subType === forcedSubType) || switchModes[0]
+    : switchModes[Math.floor(Math.random() * switchModes.length)];
   const durationMs = getDynamicDuration(6000, score, 3500);
 
   return {
@@ -1118,7 +1135,7 @@ function generateWireSwitch(score: number): Challenge {
 }
 
 // 17. Code Puzzle (Unlock Code, Code Sequence, Disappearing Path, Mirror Match, Rapid Sort, Object Swap, Moving Puzzle)
-function generateCodePuzzle(score: number): Challenge {
+function generateCodePuzzle(score: number, forcedSubType?: string): Challenge {
   const id = `code_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   // Choose 3 distinct digits so permutations are guaranteed strictly unique
   const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -1188,7 +1205,9 @@ function generateCodePuzzle(score: number): Challenge {
     },
   ];
 
-  const picked = puzzleModes[Math.floor(Math.random() * puzzleModes.length)];
+  const picked = forcedSubType
+    ? puzzleModes.find(p => p.subType === forcedSubType) || puzzleModes[0]
+    : puzzleModes[Math.floor(Math.random() * puzzleModes.length)];
   const shuffledOptions = shuffle(picked.options);
   const durationMs = getDynamicDuration(6000, score, 3500);
 
@@ -1210,67 +1229,192 @@ function generateCodePuzzle(score: number): Challenge {
   };
 }
 
-const ALL_CHALLENGE_TYPES: ChallengeType[] = [
-  'color_tap',
-  'dont_touch',
-  'find_odd',
-  'memory_position',
-  'stop_target',
-  'swipe_direction',
-  'quick_math',
-  'tap_count',
-  'rock_paper_scissors',
-  'shape_match',
-  'order_sequence',
-  'lane_action',
-  'tension_meter',
-  'floating_target',
-  'choice_hazard',
-  'wire_switch',
-  'code_puzzle',
+export interface MechanicDefinition {
+  index: number; // 1 to 50
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  summary: string;
+  type: ChallengeType;
+  generator: (score: number) => Challenge;
+}
+
+export const MECHANICS_CATALOG: MechanicDefinition[] = [
+  { index: 1, id: 'mech_color_tap', name: 'Color Tap', icon: '🎨', category: 'Reflex & Color', summary: 'Tap the color matching the target name', type: 'color_tap', generator: (s) => generateColorTap(s, false) },
+  { index: 2, id: 'mech_stroop_trap', name: 'Stroop Color Trap', icon: '🧠', category: 'Mental Trick', summary: 'Ignore ink color, read the text word', type: 'color_tap', generator: (s) => generateColorTap(s, true) },
+  { index: 3, id: 'mech_dont_touch_vehicles', name: "Don't Touch Vehicles", icon: '🚗', category: 'Impulse Control', summary: 'Do not touch any vehicle icons', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'vehicles') },
+  { index: 4, id: 'mech_dont_touch_hazards', name: "Don't Touch Hazards", icon: '💣', category: 'Impulse Control', summary: 'Avoid explosives and hazardous spikes', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'hazard_items') },
+  { index: 5, id: 'mech_dont_touch_animals', name: "Don't Touch Predators", icon: '🦁', category: 'Impulse Control', summary: 'Avoid dangerous wild predator animals', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'animals') },
+  { index: 6, id: 'mech_dont_touch_food', name: "Don't Touch Food", icon: '🍕', category: 'Impulse Control', summary: 'Skip the fast food items', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'food') },
+  { index: 7, id: 'mech_dont_touch_tech', name: "Don't Touch Tech", icon: '💻', category: 'Impulse Control', summary: 'Avoid short-circuiting electronics', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'electronics') },
+  { index: 8, id: 'mech_dont_touch_sports', name: "Don't Touch Sports", icon: '⚽', category: 'Impulse Control', summary: 'Do not touch the sports balls', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'sports') },
+  { index: 9, id: 'mech_find_odd_color', name: 'Odd Color Dot', icon: '🟣', category: 'Observation', summary: 'Spot the tile with subtle tint variation', type: 'find_odd', generator: (s) => generateFindOdd(s, 0) },
+  { index: 10, id: 'mech_find_odd_star', name: 'Odd Glowing Star', icon: '🌟', category: 'Observation', summary: 'Identify the rogue glowing star', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
+  { index: 11, id: 'mech_find_odd_imposter', name: 'Imposter Emoji', icon: '🐶', category: 'Observation', summary: 'Find the hidden animal imposter in the grid', type: 'find_odd', generator: (s) => generateFindOdd(s, 2) },
+  { index: 12, id: 'mech_memory_grid_2x2', name: 'Memory Flash 2x2', icon: '⚡', category: 'Memory', summary: 'Remember which tile flashed briefly', type: 'memory_position', generator: (s) => generateMemoryPosition(s, 2) },
+  { index: 13, id: 'mech_memory_grid_3x3', name: 'Memory Matrix 3x3', icon: '🧩', category: 'Memory', summary: 'Track target locations in 9-tile matrix', type: 'memory_position', generator: (s) => generateMemoryPosition(s, 3) },
+  { index: 14, id: 'mech_stop_target', name: 'Stop In Green Zone', icon: '🎯', category: 'Timing', summary: 'Tap precisely when pointer enters green zone', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 15, id: 'mech_swipe_cardinal', name: 'Direct Arrow Swipe', icon: '➡️', category: 'Agility', summary: 'Swipe fast in the exact direction shown', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 16, id: 'mech_swipe_inverted', name: 'Inverted Swipe', icon: '🔄', category: 'Mental Trick', summary: 'Swipe in opposite direction of the arrow', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, true) },
+  { index: 17, id: 'mech_math_true_false', name: 'True or False Math', icon: '➕', category: 'Speed Math', summary: 'Decide if the arithmetic equation is correct', type: 'quick_math', generator: (s) => generateQuickMath(s, 'true_false') },
+  { index: 18, id: 'mech_math_parity', name: 'Even or Odd Parity', icon: '⚖️', category: 'Speed Math', summary: 'Identify the requested even or odd number', type: 'quick_math', generator: (s) => generateQuickMath(s, 'parity') },
+  { index: 19, id: 'mech_math_comparison', name: 'Highest Number Pick', icon: '🔢', category: 'Speed Math', summary: 'Tap the largest number among options', type: 'quick_math', generator: (s) => generateQuickMath(s, 'comparison') },
+  { index: 20, id: 'mech_tap_count', name: 'Rapid Tap Burst', icon: '👆', category: 'Twitch Reflex', summary: 'Rapidly mash screen the exact number of times', type: 'tap_count', generator: (s) => generateTapCount(s) },
+  { index: 21, id: 'mech_rps_win', name: 'Rock Paper Scissors', icon: '✊', category: 'Reflex', summary: 'Select the hand that beats the opponent', type: 'rock_paper_scissors', generator: (s) => generateRPS(s, false) },
+  { index: 22, id: 'mech_rps_lose', name: 'Inverse RPS (Must Lose)', icon: '✋', category: 'Mental Trick', summary: 'Defeat your instincts: select the losing hand', type: 'rock_paper_scissors', generator: (s) => generateRPS(s, true) },
+  { index: 23, id: 'mech_shape_match', name: 'Shape Geometry Match', icon: '🔷', category: 'Observation', summary: 'Tap the requested geometric shape', type: 'shape_match', generator: (s) => generateShapeMatch(s) },
+  { index: 24, id: 'mech_order_numbers', name: 'Order Sequence 1-2-3', icon: '🔢', category: 'Order & Speed', summary: 'Tap numbers in ascending numerical order', type: 'order_sequence', generator: (s) => generateOrderSequence(s, false) },
+  { index: 25, id: 'mech_order_letters', name: 'Order Sequence A-B-C', icon: '🔤', category: 'Order & Speed', summary: 'Tap alphabet letters in sequence', type: 'order_sequence', generator: (s) => generateOrderSequence(s, true) },
+  { index: 26, id: 'mech_lane_knife_dodge', name: 'Knife Dodge Lane', icon: '🔪', category: 'Action Lane', summary: 'Shift lanes away from falling blades', type: 'lane_action', generator: (s) => generateLaneAction(s, 'knife_dodge') },
+  { index: 27, id: 'mech_lane_meteor_dodge', name: 'Meteor Evade Lane', icon: '☄️', category: 'Action Lane', summary: 'Steer spaceship away from incoming meteors', type: 'lane_action', generator: (s) => generateLaneAction(s, 'meteor_dodge') },
+  { index: 28, id: 'mech_lane_laser_dodge', name: 'Laser Beam Dodge', icon: '⚡', category: 'Action Lane', summary: 'Find the dead zone and avoid electric laser', type: 'lane_action', generator: (s) => generateLaneAction(s, 'laser_dodge') },
+  { index: 29, id: 'mech_lane_catch_star', name: 'Catch Falling Star', icon: '⭐', category: 'Action Lane', summary: 'Position basket directly under falling star', type: 'lane_action', generator: (s) => generateLaneAction(s, 'catch_star') },
+  { index: 30, id: 'mech_lane_coin_catch', name: 'Catch Gold Coin', icon: '🪙', category: 'Action Lane', summary: 'Grab the gold coin before it drops away', type: 'lane_action', generator: (s) => generateLaneAction(s, 'coin_catch') },
+  { index: 31, id: 'mech_tension_bullseye', name: 'Bullseye Center Stop', icon: '🎯', category: 'Tension Meter', summary: 'Stop sweeping pointer right on bullseye', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bullseye') },
+  { index: 32, id: 'mech_tension_rocket_launch', name: 'Rocket Launch Thrust', icon: '🚀', category: 'Tension Meter', summary: 'Launch engine in maximum green thrust zone', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'rocket_launch') },
+  { index: 33, id: 'mech_tension_knife_throw', name: 'Knife Throw Target', icon: '🗡️', category: 'Tension Meter', summary: 'Time your throw into rotating target board', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'knife_throw') },
+  { index: 34, id: 'mech_tension_bottle_flip', name: 'Bottle Flip Upright', icon: '🍾', category: 'Tension Meter', summary: 'Land bottle upright within balance window', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bottle_flip') },
+  { index: 35, id: 'mech_tension_power_charge', name: 'Power Charge Max', icon: '🔋', category: 'Tension Meter', summary: 'Stop power generator at peak capacity', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'power_charge') },
+  { index: 36, id: 'mech_tension_temperature', name: 'Stabilize Temperature', icon: '🌡️', category: 'Tension Meter', summary: 'Maintain boiler temperature in safe zone', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 37, id: 'mech_floating_pop_bubbles', name: 'Pop Green Bubble', icon: '🫧', category: 'Floating Target', summary: 'Pop floating green bubble and avoid white ones', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'pop_bubbles') },
+  { index: 38, id: 'mech_floating_balloon_burst', name: 'Balloon Burst', icon: '🎈', category: 'Floating Target', summary: 'Snipe the red balloon among decoys', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'balloon_burst') },
+  { index: 39, id: 'mech_floating_moving_target', name: 'Moving Crosshair', icon: '🎪', category: 'Floating Target', summary: 'Strike the moving target crosshair', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'moving_target') },
+  { index: 40, id: 'mech_floating_avoid_bomb', name: 'Gem Tap (Avoid Bomb)', icon: '💎', category: 'Floating Target', summary: 'Collect floating gem without tapping bombs', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'avoid_bomb') },
+  { index: 41, id: 'mech_choice_which_door', name: 'Which Safe Door?', icon: '🚪', category: 'Hazard Choice', summary: 'Read the clue and choose the trap-free door', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'which_door') },
+  { index: 42, id: 'mech_choice_trap_door', name: 'Avoid The Trapdoor', icon: '🕳️', category: 'Hazard Choice', summary: 'Detect and evade collapsing trapdoor', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'trap_door') },
+  { index: 43, id: 'mech_choice_floor_is_lava', name: 'Floor Is Lava', icon: '🌋', category: 'Hazard Choice', summary: 'Jump onto solid stone before magma rises', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'floor_is_lava') },
+  { index: 44, id: 'mech_choice_safe_tile', name: 'Step On Safe Tile', icon: '🟩', category: 'Hazard Choice', summary: 'Find the glowing tile on crumbling floor', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'safe_tile') },
+  { index: 45, id: 'mech_choice_portal_match', name: 'Warp Portal Match', icon: '🌀', category: 'Hazard Choice', summary: 'Send energy orb into matching colored portal', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'portal_match') },
+  { index: 46, id: 'mech_choice_key_and_lock', name: 'Vault Key & Lock', icon: '🗝️', category: 'Hazard Choice', summary: 'Match golden key to vault lock', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'key_and_lock') },
+  { index: 47, id: 'mech_choice_escape_box', name: 'Escape The Box Vent', icon: '📦', category: 'Hazard Choice', summary: 'Find unbolted ventilation escape hatch', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'escape_box') },
+  { index: 48, id: 'mech_choice_color_pour', name: 'Chemical Color Pour', icon: '🧪', category: 'Hazard Choice', summary: 'Pour reagent into matching test beaker', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'color_pour') },
+  { index: 49, id: 'mech_choice_magnet_match', name: 'Magnet Pole Match', icon: '🧲', category: 'Hazard Choice', summary: 'Select opposite magnetic polarity to attract', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'magnet_match') },
+  { index: 50, id: 'mech_wire_bomb_defuse', name: 'Bomb Defuse Wire Cut', icon: '✂️', category: 'Circuit & Switch', summary: 'Cut exact target wire before clock hits zero', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'bomb_defuse') },
 ];
 
-export function generateNextChallenge(score: number, lastType?: ChallengeType): Challenge {
-  // Filter out recent type to avoid immediate repetition
-  const pool = ALL_CHALLENGE_TYPES.filter(t => t !== lastType);
-  const nextType = pool[Math.floor(Math.random() * pool.length)] || ALL_CHALLENGE_TYPES[0];
+/**
+ * MechanicsDeckManager: Infinite Shuffled Bag of 50 Unique Mechanics.
+ * Guarantees that ALL 50 mechanics appear sequentially without premature repetition.
+ * Tracks discovered mechanics across game sessions in localStorage.
+ */
+class MechanicsDeckManager {
+  private activeDeck: number[] = [];
+  private lastMechanicIndex: number = -1;
+  private discoveredIndices: Set<number> = new Set();
 
-  switch (nextType) {
-    case 'color_tap':
-      return generateColorTap(score);
-    case 'dont_touch':
-      return generateDontTouch(score);
-    case 'find_odd':
-      return generateFindOdd(score);
-    case 'memory_position':
-      return generateMemoryPosition(score);
-    case 'stop_target':
-      return generateStopTarget(score);
-    case 'swipe_direction':
-      return generateSwipeDirection(score);
-    case 'quick_math':
-      return generateQuickMath(score);
-    case 'tap_count':
-      return generateTapCount(score);
-    case 'rock_paper_scissors':
-      return generateRPS(score);
-    case 'shape_match':
-      return generateShapeMatch(score);
-    case 'order_sequence':
-      return generateOrderSequence(score);
-    case 'lane_action':
-      return generateLaneAction(score);
-    case 'tension_meter':
-      return generateTensionMeter(score);
-    case 'floating_target':
-      return generateFloatingTarget(score);
-    case 'choice_hazard':
-      return generateChoiceHazard(score);
-    case 'wire_switch':
-      return generateWireSwitch(score);
-    case 'code_puzzle':
-      return generateCodePuzzle(score);
-    default:
-      return generateLaneAction(score);
+  constructor() {
+    this.loadDiscovered();
+    this.refillDeck();
   }
+
+  private loadDiscovered(): void {
+    try {
+      const saved = localStorage.getItem('speed_tension_discovered_mechanics_v1');
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr)) {
+          this.discoveredIndices = new Set(arr);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  private saveDiscovered(): void {
+    try {
+      localStorage.setItem(
+        'speed_tension_discovered_mechanics_v1',
+        JSON.stringify(Array.from(this.discoveredIndices))
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  private refillDeck(): void {
+    // Fill deck with indices 0 through 49
+    const all = Array.from({ length: MECHANICS_CATALOG.length }, (_, i) => i);
+    // Fisher-Yates Shuffle
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    // Prevent immediate repeat on reshuffle boundary
+    if (all[0] === this.lastMechanicIndex && all.length > 1) {
+      const swapIdx = Math.floor(Math.random() * (all.length - 1)) + 1;
+      [all[0], all[swapIdx]] = [all[swapIdx], all[0]];
+    }
+    this.activeDeck = all;
+  }
+
+  /**
+   * Draws the next mechanic from the shuffled 50-card bag.
+   */
+  public drawNextMechanic(lastType?: ChallengeType): MechanicDefinition {
+    if (this.activeDeck.length === 0) {
+      this.refillDeck();
+    }
+
+    // If top card happens to match lastType, swap with next card if available to avoid same engine back-to-back
+    if (lastType && this.activeDeck.length > 1) {
+      const topIdx = this.activeDeck[this.activeDeck.length - 1];
+      if (MECHANICS_CATALOG[topIdx].type === lastType) {
+        // Swap top with second-to-top
+        const swapIdx = this.activeDeck.length - 2;
+        [this.activeDeck[this.activeDeck.length - 1], this.activeDeck[swapIdx]] = [
+          this.activeDeck[swapIdx],
+          this.activeDeck[this.activeDeck.length - 1],
+        ];
+      }
+    }
+
+    const nextIndex = this.activeDeck.pop()!;
+    this.lastMechanicIndex = nextIndex;
+    const def = MECHANICS_CATALOG[nextIndex];
+
+    if (!this.discoveredIndices.has(def.index)) {
+      this.discoveredIndices.add(def.index);
+      this.saveDiscovered();
+    }
+
+    return def;
+  }
+
+  public getDiscoveredCount(): number {
+    return this.discoveredIndices.size;
+  }
+
+  public isDiscovered(index: number): boolean {
+    return this.discoveredIndices.has(index);
+  }
+
+  public getCatalog(): readonly MechanicDefinition[] {
+    return MECHANICS_CATALOG;
+  }
+
+  public resetDiscovery(): void {
+    this.discoveredIndices.clear();
+    this.saveDiscovered();
+    this.refillDeck();
+  }
+}
+
+export const mechanicsDeckManager = new MechanicsDeckManager();
+
+/**
+ * Generates the next challenge drawn directly from the 50-card shuffled deck.
+ * Guaranteed variety: each of the 50 mechanics appears in order before any repeat!
+ */
+export function generateNextChallenge(score: number, lastType?: ChallengeType): Challenge {
+  const mechanic = mechanicsDeckManager.drawNextMechanic(lastType);
+  const challenge = mechanic.generator(score);
+
+  // Attach mechanic metadata
+  challenge.mechanicIndex = mechanic.index;
+  challenge.mechanicName = mechanic.name;
+  challenge.mechanicIcon = mechanic.icon;
+
+  return challenge;
 }

@@ -28,6 +28,9 @@ export type GameScreen =
 export interface BaseChallenge {
   id: string;
   type: ChallengeType;
+  mechanicIndex?: number;
+  mechanicName?: string;
+  mechanicIcon?: string;
   title: string;
   instruction: string;
   durationMs: number;
@@ -250,12 +253,7 @@ export type ChallengePayload =
   | { type: 'wire_switch'; data: WireSwitchPayload }
   | { type: 'code_puzzle'; data: CodePuzzlePayload };
 
-export interface Challenge {
-  id: string;
-  type: ChallengeType;
-  title: string;
-  instruction: string;
-  durationMs: number;
+export interface Challenge extends BaseChallenge {
   payload: ChallengePayload;
 }
 
