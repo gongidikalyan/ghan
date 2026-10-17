@@ -5,11 +5,11 @@
  */
 
 export const ADMOB_CONFIG = {
-  appId: import.meta.env.VITE_ADMOB_APP_ID || '',
-  interstitialAdUnitId: import.meta.env.VITE_ADMOB_INTERSTITIAL_ID || '',
-  publisherId: '',
-  // Ads are only enabled when an Interstitial Ad Unit ID is explicitly configured
-  isAdsEnabled: Boolean(import.meta.env.VITE_ADMOB_INTERSTITIAL_ID && import.meta.env.VITE_ADMOB_INTERSTITIAL_ID.trim() !== ''),
+  appId: import.meta.env.VITE_ADMOB_APP_ID || 'ca-app-pub-5776267944392683~3263090526',
+  interstitialAdUnitId: import.meta.env.VITE_ADMOB_INTERSTITIAL_ID || 'ca-app-pub-5776267944392683/8620193138',
+  publisherId: 'pub-5776267944392683',
+  // Enabled for production release
+  isAdsEnabled: true,
 } as const;
 
 /**
