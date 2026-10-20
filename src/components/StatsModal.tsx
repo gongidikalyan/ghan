@@ -44,7 +44,7 @@ export const StatsModal: React.FC<StatsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 animate-fade-in">
       <div className={`w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col gap-4 max-h-[85vh] border ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900 shadow-slate-300/50'

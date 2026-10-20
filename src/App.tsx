@@ -385,9 +385,10 @@ export default function App() {
 
   return (
     <div
-      className={`relative w-full h-[100dvh] flex flex-col items-center justify-between overflow-hidden select-none font-sans transition-colors duration-200 ${
+      className={`fixed inset-0 w-full h-full flex flex-col items-center justify-between overflow-hidden select-none font-sans ${
         isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'
-      } ${getThemeWrapperClass()} ${screenShake ? 'animate-shake' : ''}`}
+      } ${getThemeWrapperClass()}`}
+      style={{ transform: 'translate3d(0, 0, 0)' }}
     >
       {/* Background ambient lighting */}
       <div className={`absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-300 ${
@@ -402,17 +403,21 @@ export default function App() {
       </div>
 
       {/* Interim success flash overlay */}
-      {interimSuccess && (
-        <div className="absolute inset-0 pointer-events-none z-40 flash-green-overlay" />
-      )}
+      <div 
+        className={`absolute inset-0 pointer-events-none z-40 transition-opacity duration-150 ${
+          interimSuccess ? 'opacity-100 flash-green-overlay' : 'opacity-0'
+        }`} 
+      />
 
       {/* Screen shake / fail flash */}
-      {screenShake && (
-        <div className="absolute inset-0 pointer-events-none z-40 flash-red-overlay" />
-      )}
+      <div 
+        className={`absolute inset-0 pointer-events-none z-40 transition-opacity duration-150 ${
+          screenShake ? 'opacity-100 flash-red-overlay' : 'opacity-0'
+        }`} 
+      />
 
       {/* Core Mobile-First Container (max 420px width) */}
-      <div className="relative w-full max-w-md h-full flex flex-col justify-between items-center z-10">
+      <div className={`relative w-full max-w-md h-full flex flex-col justify-between items-center z-10 ${screenShake ? 'animate-shake' : ''}`}>
         {/* Screen 1: HOME */}
         {screen === 'HOME' && (
           <HomeScreen

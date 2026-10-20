@@ -22,12 +22,14 @@ export const TapCountChallenge: React.FC<TapCountChallengeProps> = ({
   const { targetCount } = payload;
   const isLight = colorMode === 'light';
   const [currentTaps, setCurrentTaps] = useState<number>(0);
+  const currentTapsRef = useRef<number>(0);
   const isCompletedRef = useRef<boolean>(false);
 
   const handleTap = () => {
     if (isCompletedRef.current) return;
 
-    const next = currentTaps + 1;
+    currentTapsRef.current += 1;
+    const next = currentTapsRef.current;
     setCurrentTaps(next);
 
     soundManager.playTap();

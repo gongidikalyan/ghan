@@ -64,7 +64,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 animate-fade-in">
       <div className={`w-full max-w-md rounded-3xl p-5 shadow-2xl flex flex-col max-h-[88vh] border ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900 shadow-slate-300/50'
@@ -77,7 +77,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-indigo-500" />
             <h3 className="text-lg font-black font-display tracking-tight uppercase">
-              50 Reusable Mechanics
+              {catalog.length} Micro-Game Mechanics
             </h3>
           </div>
           <button
@@ -112,7 +112,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>50 Mechanics ({discoveredCount}/50)</span>
+            <span>180 Mechanics ({discoveredCount}/{catalog.length})</span>
           </button>
           <button
             type="button"
@@ -132,7 +132,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
           </button>
         </div>
 
-        {/* Tab 1: 50 Mechanics Compendium */}
+        {/* Tab 1: 180 Mechanics Compendium */}
         {activeTab === 'mechanics' && (
           <div className="flex-1 overflow-y-auto py-1 flex flex-col gap-2 pr-1">
             {/* Discovery Progress Meter */}
@@ -158,7 +158,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
                 />
               </div>
               <p className={`text-[11px] mt-1.5 leading-tight ${isLight ? 'text-indigo-800/80' : 'text-indigo-300/80'}`}>
-                Survive longer runs to discover all 50 unique mechanics! Fresh mechanics are dealt from a non-repeating 50-card shuffled deck.
+                Survive longer runs to discover all {catalog.length} unique mechanics! Fresh mechanics are dealt from a non-repeating {catalog.length}-card shuffled deck.
               </p>
             </div>
 

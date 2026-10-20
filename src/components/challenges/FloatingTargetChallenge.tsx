@@ -21,10 +21,11 @@ export const FloatingTargetChallenge: React.FC<FloatingTargetChallengeProps> = (
   const { subType, items, requiredPops, targetDescription } = payload;
   const isLight = colorMode === 'light';
   const [poppedIds, setPoppedIds] = useState<string[]>([]);
+  const poppedIdsRef = useRef<string[]>([]);
   const isResolvedRef = useRef<boolean>(false);
 
   const handleItemClick = (item: FloatingItem) => {
-    if (isResolvedRef.current || poppedIds.includes(item.id)) return;
+    if (isResolvedRef.current || poppedIdsRef.current.includes(item.id)) return;
 
     if (!item.isTarget) {
       isResolvedRef.current = true;
@@ -35,10 +36,10 @@ export const FloatingTargetChallenge: React.FC<FloatingTargetChallengeProps> = (
     soundManager.playTap();
     hapticManager.lightTap();
 
-    const nextPopped = [...poppedIds, item.id];
-    setPoppedIds(nextPopped);
+    poppedIdsRef.current = [...poppedIdsRef.current, item.id];
+    setPoppedIds(poppedIdsRef.current);
 
-    if (nextPopped.length >= requiredPops) {
+    if (poppedIdsRef.current.length >= requiredPops) {
       isResolvedRef.current = true;
       onCorrect();
     }

@@ -93,25 +93,32 @@ export const LaneActionChallenge: React.FC<LaneActionChallengeProps> = ({
   }, [durationMs, mode, hazardLanes, targetLane, onCorrect, onWrong]);
 
   const moveLeft = () => {
-    if (playerLane > 0) {
+    if (playerLaneRef.current > 0) {
       soundManager.playTap();
       hapticManager.lightTap();
-      setPlayerLane(prev => prev - 1);
+      const next = playerLaneRef.current - 1;
+      playerLaneRef.current = next;
+      setPlayerLane(next);
     }
   };
 
   const moveRight = () => {
-    if (playerLane < laneCount - 1) {
+    if (playerLaneRef.current < laneCount - 1) {
       soundManager.playTap();
       hapticManager.lightTap();
-      setPlayerLane(prev => prev + 1);
+      const next = playerLaneRef.current + 1;
+      playerLaneRef.current = next;
+      setPlayerLane(next);
     }
   };
 
   const setLaneDirectly = (laneIdx: number) => {
-    soundManager.playTap();
-    hapticManager.lightTap();
-    setPlayerLane(laneIdx);
+    if (laneIdx >= 0 && laneIdx < laneCount) {
+      soundManager.playTap();
+      hapticManager.lightTap();
+      playerLaneRef.current = laneIdx;
+      setPlayerLane(laneIdx);
+    }
   };
 
   return (

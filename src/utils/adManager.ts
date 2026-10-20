@@ -9,7 +9,8 @@ const STORAGE_KEY = 'speed_tension_ad_metrics_v1';
 
 interface AdMetrics {
   totalRunsCompleted: number;
-  eligibleRunsSinceLastAd: number;
+  gamesSinceLastAd: number;
+  eligibleRunsSinceLastAd?: number;
   lastAdTimestamp: number;
   activePlaytimeMs: number;
   sessionStartTime: number;
@@ -17,11 +18,14 @@ interface AdMetrics {
 
 const DEFAULT_METRICS: AdMetrics = {
   totalRunsCompleted: 0,
-  eligibleRunsSinceLastAd: 0,
+  gamesSinceLastAd: 0,
   lastAdTimestamp: Date.now(),
   activePlaytimeMs: 0,
   sessionStartTime: Date.now(),
 };
+
+// Target frequency: 1 ad for every 2 games
+const GAMES_PER_AD = 2;
 
 class AdManager {
   private metrics: AdMetrics;
@@ -38,6 +42,7 @@ class AdManager {
         return {
           ...DEFAULT_METRICS,
           ...parsed,
+          gamesSinceLastAd: parsed.gamesSinceLastAd ?? parsed.eligibleRunsSinceLastAd ?? 0,
           sessionStartTime: Date.now(),
         };
       }
@@ -56,65 +61,46 @@ class AdManager {
   }
 
   /**
-   * Called when a run terminates.
-   * Increments completed runs and tracks run score.
+   * Called when a game run terminates.
+   * Increments total games and games counter since last ad.
    */
-  public recordRunCompleted(score: number, runDurationMs: number): void {
+  public recordRunCompleted(_score: number, runDurationMs: number): void {
     this.metrics.totalRunsCompleted += 1;
+    this.metrics.gamesSinceLastAd += 1;
     this.metrics.activePlaytimeMs += runDurationMs;
-
-    // Only count as an eligible game over if the run lasted at least 2 challenges
-    if (score >= 2) {
-      this.metrics.eligibleRunsSinceLastAd += 1;
-    }
 
     this.saveMetrics();
   }
 
   /**
-   * Evaluates all frequency rules to decide if an interstitial ad should appear:
-   * 1. Never on Run 1 (total completed runs must be > 1).
-   * 2. Score Threshold: Skip if the run score was < 2 (avoids punishing quick accidental mis-taps).
-   * 3. Frequency: Show every 3 to 4 eligible Game Overs (>= 3).
-   * 4. Or trigger after at least 2.5 minutes (150 seconds) of total active playtime.
+   * Evaluates if an interstitial ad should appear:
+   * Triggers an ad for every 2 games played.
    */
-  public shouldShowInterstitial(runScore: number): boolean {
-    // If ads are disabled (testing phase / no keys), never show ads
+  public shouldShowInterstitial(_runScore?: number): boolean {
+    // If ads are disabled in configuration, do not display ads
     if (!ADMOB_CONFIG.isAdsEnabled) {
       return false;
     }
 
-    // Rule 1: Never on Run 1
-    if (this.metrics.totalRunsCompleted <= 1) {
-      return false;
-    }
-
-    // Rule 4: Score Threshold - Skip if run lasted less than 2 challenges
-    if (runScore < 2) {
-      return false;
-    }
-
-    const PLAYTIME_THRESHOLD_MS = 150 * 1000; // 2.5 minutes (150s)
-    const timeSinceLastAd = Date.now() - this.metrics.lastAdTimestamp;
-
-    // Rule 2 & 3: Every 3 to 4 Game Overs OR >= 2.5 minutes active playtime
-    const isDueByRunCount = this.metrics.eligibleRunsSinceLastAd >= 3;
-    const isDueByPlaytime = (
-      this.metrics.activePlaytimeMs >= PLAYTIME_THRESHOLD_MS || 
-      timeSinceLastAd >= (180 * 1000) // 3 minutes wall-clock time
-    );
-
-    return isDueByRunCount || isDueByPlaytime;
+    // Trigger ad after every 2 completed games
+    return this.metrics.gamesSinceLastAd >= GAMES_PER_AD;
   }
 
   /**
-   * Called after an ad has been shown to reset frequency timers and counters.
+   * Called after an ad has been triggered/shown to reset the counter.
    */
   public recordAdShown(): void {
-    this.metrics.eligibleRunsSinceLastAd = 0;
+    this.metrics.gamesSinceLastAd = 0;
     this.metrics.activePlaytimeMs = 0;
     this.metrics.lastAdTimestamp = Date.now();
     this.saveMetrics();
+  }
+
+  /**
+   * Returns how many games are remaining until the next ad placement.
+   */
+  public getGamesUntilNextAd(): number {
+    return Math.max(0, GAMES_PER_AD - this.metrics.gamesSinceLastAd);
   }
 
   /**
@@ -126,3 +112,4 @@ class AdManager {
 }
 
 export const adManager = new AdManager();
+

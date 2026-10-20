@@ -22,21 +22,24 @@ export const OrderSequenceChallenge: React.FC<OrderSequenceChallengeProps> = ({
   const isLight = colorMode === 'light';
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [clearedIds, setClearedIds] = useState<string[]>([]);
+  const currentStepRef = useRef<number>(1);
+  const clearedIdsRef = useRef<string[]>([]);
   const isFinishedRef = useRef<boolean>(false);
 
   const handleItemClick = (item: OrderItem) => {
-    if (isFinishedRef.current || clearedIds.includes(item.id)) return;
+    if (isFinishedRef.current || clearedIdsRef.current.includes(item.id)) return;
 
-    if (item.stepNumber === currentStep) {
+    if (item.stepNumber === currentStepRef.current) {
       soundManager.playTap();
       hapticManager.lightTap();
 
-      const nextStep = currentStep + 1;
-      const nextCleared = [...clearedIds, item.id];
-      setClearedIds(nextCleared);
-      setCurrentStep(nextStep);
+      currentStepRef.current += 1;
+      clearedIdsRef.current = [...clearedIdsRef.current, item.id];
+      
+      setCurrentStep(currentStepRef.current);
+      setClearedIds(clearedIdsRef.current);
 
-      if (nextCleared.length === totalSteps) {
+      if (clearedIdsRef.current.length === totalSteps) {
         isFinishedRef.current = true;
         onCorrect();
       }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, HelpCircle } from 'lucide-react';
 import { ColorMode, MemoryPositionPayload } from '../../types/game';
 
@@ -21,6 +21,8 @@ export const MemoryPositionChallenge: React.FC<MemoryPositionChallengeProps> = (
   const isLight = colorMode === 'light';
   const [isMemorizing, setIsMemorizing] = useState<boolean>(true);
   const [tappedIndices, setTappedIndices] = useState<number[]>([]);
+  const tappedIndicesRef = useRef<number[]>([]);
+  const isFinishedRef = useRef<boolean>(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,18 +35,20 @@ export const MemoryPositionChallenge: React.FC<MemoryPositionChallengeProps> = (
   const totalTiles = gridSize * gridSize;
 
   const handleTileClick = (index: number) => {
-    if (isMemorizing) return;
+    if (isMemorizing || isFinishedRef.current) return;
 
-    if (tappedIndices.includes(index)) return;
+    if (tappedIndicesRef.current.includes(index)) return;
 
     if (targetIndices.includes(index)) {
-      const nextTapped = [...tappedIndices, index];
-      setTappedIndices(nextTapped);
+      tappedIndicesRef.current = [...tappedIndicesRef.current, index];
+      setTappedIndices(tappedIndicesRef.current);
 
-      if (nextTapped.length === targetIndices.length) {
+      if (tappedIndicesRef.current.length === targetIndices.length) {
+        isFinishedRef.current = true;
         onCorrect();
       }
     } else {
+      isFinishedRef.current = true;
       onWrong(`Wrong tile tapped! It wasn't there.`);
     }
   };

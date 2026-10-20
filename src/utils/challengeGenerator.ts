@@ -821,7 +821,7 @@ function generateTensionMeter(score: number, forcedSubType?: string): Challenge 
 function generateFloatingTarget(score: number, forcedSubType?: string): Challenge {
   const id = `float_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const modes = [
-    { subType: 'pop_bubbles', title: 'POP THE BUBBLES', instruction: 'POP THE GREEN BUBBLE!', targetIcon: '🫧', hazardIcon: '⚪', desc: 'Pop green target bubble' },
+    { subType: 'pop_bubbles', title: 'POP THE BUBBLES', instruction: 'POP THE BUBBLE 🫧!', targetIcon: '🫧', hazardIcon: '⚪', desc: 'Pop target bubble 🫧' },
     { subType: 'balloon_burst', title: 'BALLOON BURST', instruction: 'POP THE RED BALLOON!', targetIcon: '🎈', hazardIcon: '🔵', desc: 'Pop red balloon' },
     { subType: 'moving_target', title: 'MOVING TARGET', instruction: 'HIT MOVING CROSSHAIR!', targetIcon: '🎯', hazardIcon: '🔘', desc: 'Tap crosshair target' },
     { subType: 'final_target', title: 'FINAL TARGET', instruction: 'SURVIVE AND HIT TARGET!', targetIcon: '🎪', hazardIcon: '◽', desc: 'Tap the final target' },
@@ -991,9 +991,10 @@ function generateChoiceHazard(score: number, forcedSubType?: string): Challenge 
       title: 'MAGNET MATCH',
       instruction: 'ATTRACT NORTH POLE (+)',
       question: 'TARGET: NORTH (+)',
+      clue: 'Opposites attract! (+ attracts -)',
       options: [
-        { id: 'opt_m_north', title: 'NORTH (+)', icon: '🧲', isCorrect: true },
-        { id: 'opt_m_south', title: 'SOUTH (-)', icon: '🧲', isCorrect: false },
+        { id: 'opt_m_south', title: 'SOUTH (-)', icon: '🧲', isCorrect: true },
+        { id: 'opt_m_north', title: 'NORTH (+)', icon: '🧲', isCorrect: false },
       ],
     },
     {
@@ -1230,7 +1231,7 @@ function generateCodePuzzle(score: number, forcedSubType?: string): Challenge {
 }
 
 export interface MechanicDefinition {
-  index: number; // 1 to 50
+  index: number; // 1 to 180
   id: string;
   name: string;
   icon: string;
@@ -1291,11 +1292,143 @@ export const MECHANICS_CATALOG: MechanicDefinition[] = [
   { index: 48, id: 'mech_choice_color_pour', name: 'Chemical Color Pour', icon: '🧪', category: 'Hazard Choice', summary: 'Pour reagent into matching test beaker', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'color_pour') },
   { index: 49, id: 'mech_choice_magnet_match', name: 'Magnet Pole Match', icon: '🧲', category: 'Hazard Choice', summary: 'Select opposite magnetic polarity to attract', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'magnet_match') },
   { index: 50, id: 'mech_wire_bomb_defuse', name: 'Bomb Defuse Wire Cut', icon: '✂️', category: 'Circuit & Switch', summary: 'Cut exact target wire before clock hits zero', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'bomb_defuse') },
+  { index: 51, id: 'mech_dont_do_anything', name: "Don't Do Anything", icon: '🧘', category: 'Impulse Control', summary: 'Fight the urge: touch nothing until timer expires', type: 'dont_touch', generator: (s) => generateDontTouch(s) },
+  { index: 52, id: 'mech_mirror_swipe', name: 'Mirror Swipe Invert', icon: '🪞', category: 'Mental Trick', summary: 'Swipe in mirror-inverted direction', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, true) },
+  { index: 53, id: 'mech_fake_game_over', name: 'Fake Out Alert', icon: '💀', category: 'Mental Trick', summary: 'Bypass fake warning and tap resume target', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'final_target') },
+  { index: 54, id: 'mech_missing_vowel', name: 'Missing Vowel Fill', icon: '🔤', category: 'Order & Speed', summary: 'Complete word spelling sequence', type: 'order_sequence', generator: (s) => generateOrderSequence(s, true) },
+  { index: 55, id: 'mech_true_color_match', name: 'True Color Match', icon: '🌈', category: 'Reflex & Color', summary: 'Match true ink color without distraction', type: 'color_tap', generator: (s) => generateColorTap(s, false) },
+  { index: 56, id: 'mech_opposite_count', name: 'Opposite Number Pick', icon: '🔢', category: 'Mental Trick', summary: 'Pick number that contradicts rule', type: 'quick_math', generator: (s) => generateQuickMath(s, 'parity') },
+  { index: 57, id: 'mech_shadow_size_trick', name: 'Shadow Size Check', icon: '👤', category: 'Observation', summary: 'Spot anomalous cast shadow', type: 'find_odd', generator: (s) => generateFindOdd(s, 0) },
+  { index: 58, id: 'mech_wrong_equation_fix', name: 'Equation Error Fix', icon: '✏️', category: 'Speed Math', summary: 'Evaluate arithmetic equation veracity', type: 'quick_math', generator: (s) => generateQuickMath(s, 'true_false') },
+  { index: 59, id: 'mech_electric_fence_jump', name: 'Electric Fence Jump', icon: '⚡', category: 'Action Lane', summary: 'Evade high-voltage perimeter fence', type: 'lane_action', generator: (s) => generateLaneAction(s, 'laser_dodge') },
+  { index: 60, id: 'mech_submarine_dive', name: 'Submarine Depth Dive', icon: '🌊', category: 'Action Lane', summary: 'Steer sub between naval depth mines', type: 'lane_action', generator: (s) => generateLaneAction(s, 'meteor_dodge') },
+  { index: 61, id: 'mech_sliding_doors', name: 'Sliding Blast Doors', icon: '🚪', category: 'Action Lane', summary: 'Slip through closing hydraulic gates', type: 'lane_action', generator: (s) => generateLaneAction(s, 'knife_dodge') },
+  { index: 62, id: 'mech_boulder_leap', name: 'Rolling Boulder Leap', icon: '🪨', category: 'Action Lane', summary: 'Leap into safe lane away from stone', type: 'lane_action', generator: (s) => generateLaneAction(s, 'meteor_dodge') },
+  { index: 63, id: 'mech_shield_deflect', name: 'Shield Deflect Guard', icon: '🛡️', category: 'Action Lane', summary: 'Block incoming fireball with shield', type: 'lane_action', generator: (s) => generateLaneAction(s, 'catch_star') },
+  { index: 64, id: 'mech_pothole_swerve', name: 'High-Speed Pothole', icon: '🏎️', category: 'Action Lane', summary: 'Steer sports car around road craters', type: 'lane_action', generator: (s) => generateLaneAction(s, 'knife_dodge') },
+  { index: 65, id: 'mech_train_crossing', name: 'Railroad Crossing', icon: '🚊', category: 'Action Lane', summary: 'Evade incoming express train', type: 'lane_action', generator: (s) => generateLaneAction(s, 'laser_dodge') },
+  { index: 66, id: 'mech_tornado_evade', name: 'Vortex Tornado Evade', icon: '🌪️', category: 'Action Lane', summary: 'Keep vehicle outside vortex suction', type: 'lane_action', generator: (s) => generateLaneAction(s, 'meteor_dodge') },
+  { index: 67, id: 'mech_pressure_valve', name: 'Pressure Valve Defuse', icon: '🎛️', category: 'Tension Meter', summary: 'Release valve in green safety threshold', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 68, id: 'mech_tightrope_unicycle', name: 'Tightrope Balance', icon: '🎪', category: 'Tension Meter', summary: 'Keep unicycle bubble dead centered', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'balance_meter') },
+  { index: 69, id: 'mech_safe_dial_lock', name: 'Safe Dial Tumbler', icon: '🔐', category: 'Tension Meter', summary: 'Stop rotating dial right on lock notch', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bullseye') },
+  { index: 70, id: 'mech_coffee_pour', name: 'Pour To The Brim', icon: '☕', category: 'Tension Meter', summary: 'Fill mug to dotted line without spilling', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bottle_flip') },
+  { index: 71, id: 'mech_heartbeat_sync', name: 'Heartbeat Pulse Sync', icon: '💓', category: 'Tension Meter', summary: 'Time tap precisely with peak pulse', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'power_charge') },
+  { index: 72, id: 'mech_sniper_wind', name: 'Sniper Crosswind Aim', icon: '🎯', category: 'Tension Meter', summary: 'Adjust aim point against wind deflection', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'wind_control') },
+  { index: 73, id: 'mech_dynamite_fuse', name: 'Dynamite Fuse Snip', icon: '🧨', category: 'Tension Meter', summary: 'Snip fuse spark before it hits TNT', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'rocket_launch') },
+  { index: 74, id: 'mech_rocket_reentry', name: 'Re-entry Angle Lock', icon: '🛸', category: 'Tension Meter', summary: 'Lock spacecraft pitch in atmospheric cone', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'rocket_landing') },
+  { index: 75, id: 'mech_recycling_sort', name: 'Eco Recycling Sorter', icon: '♻️', category: 'Hazard Choice', summary: 'Sort plastic waste into recycle receptacle', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'rapid_sort') },
+  { index: 76, id: 'mech_burglar_vs_cop', name: 'Burglar vs Civilian', icon: '👮', category: 'Hazard Choice', summary: 'Spot and arrest masked perpetrator', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'which_door') },
+  { index: 77, id: 'mech_sandwich_stack', name: 'Sandwich Assembly', icon: '🥪', category: 'Order & Speed', summary: 'Stack ingredients in customer order', type: 'order_sequence', generator: (s) => generateOrderSequence(s, false) },
+  { index: 78, id: 'mech_coin_denomination', name: 'Coin Value Pick', icon: '🪙', category: 'Observation', summary: 'Tap requested currency coin', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
+  { index: 79, id: 'mech_plug_leaks', name: 'Dual Leak Plug', icon: '🚰', category: 'Twitch Reflex', summary: 'Rapidly mash to seal water pipe spray', type: 'tap_count', generator: (s) => generateTapCount(s, 4) },
+  { index: 80, id: 'mech_battery_polarity', name: 'Battery Polarity Slot', icon: '🔋', category: 'Circuit & Switch', summary: 'Insert positive (+) terminal forward', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'light_switch') },
+  { index: 81, id: 'mech_package_seal', name: 'Conveyor Box Seal', icon: '📦', category: 'Agility', summary: 'Swipe across seam to tape parcel shut', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 82, id: 'mech_passport_stamp', name: 'Border Visa Stamp', icon: '🛂', category: 'Hazard Choice', summary: 'Review expiration year and stamp passport', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'trap_door') },
+  { index: 83, id: 'mech_odd_prime', name: 'Spot The Prime Number', icon: '🔢', category: 'Speed Math', summary: 'Identify the only prime integer', type: 'quick_math', generator: (s) => generateQuickMath(s, 'parity') },
+  { index: 84, id: 'mech_quick_percentage', name: 'Quick 50% Discount', icon: '🏷️', category: 'Speed Math', summary: 'Calculate clearance price under clock', type: 'quick_math', generator: (s) => generateQuickMath(s, 'comparison') },
+  { index: 85, id: 'mech_clock_face', name: 'Analog Clock Match', icon: '⏰', category: 'Speed Math', summary: 'Match clock hands to digital time', type: 'quick_math', generator: (s) => generateQuickMath(s, 'true_false') },
+  { index: 86, id: 'mech_roman_numeral', name: 'Roman Numeral Decode', icon: '🏛️', category: 'Speed Math', summary: 'Convert Roman numeral VII to decimal', type: 'quick_math', generator: (s) => generateQuickMath(s, 'parity') },
+  { index: 87, id: 'mech_greatest_diff', name: 'Greatest Gap Pair', icon: '➖', category: 'Speed Math', summary: 'Pick pair with widest numerical span', type: 'quick_math', generator: (s) => generateQuickMath(s, 'comparison') },
+  { index: 88, id: 'mech_dice_total', name: 'Double Dice Total', icon: '🎲', category: 'Speed Math', summary: 'Tally pips of rolled dice pair', type: 'quick_math', generator: (s) => generateQuickMath(s, 'true_false') },
+  { index: 89, id: 'mech_coin_counter', name: 'Coin Drop Tally', icon: '💰', category: 'Speed Math', summary: 'Sum dropped coins in treasure chest', type: 'quick_math', generator: (s) => generateQuickMath(s, 'comparison') },
+  { index: 90, id: 'mech_temp_freeze', name: 'Freezing Point Check', icon: '❄️', category: 'Speed Math', summary: 'Confirm water freezing threshold 0°C', type: 'quick_math', generator: (s) => generateQuickMath(s, 'true_false') },
+  { index: 91, id: 'mech_briefcase_combo', name: 'Briefcase Lock Combo', icon: '💼', category: 'Memory', summary: 'Recall flashed 3-digit combination', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'unlock_code') },
+  { index: 92, id: 'mech_which_one_moved', name: 'Position Shift Anomaly', icon: '🕵️', category: 'Memory', summary: 'Detect tile that shifted during blink', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'object_swap') },
+  { index: 93, id: 'mech_footstep_tracker', name: 'Footstep Trail Trace', icon: '🐾', category: 'Memory', summary: 'Follow trail to destination tile', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'disappearing_path') },
+  { index: 94, id: 'mech_simon_fast', name: 'Rapid Simon Rhythm', icon: '🚦', category: 'Memory', summary: 'Repeat flashed light sequence', type: 'memory_position', generator: (s) => generateMemoryPosition(s, 2) },
+  { index: 95, id: 'mech_shadow_silhouette', name: 'Animal Silhouette', icon: '👤', category: 'Observation', summary: 'Match animal to cast silhouette', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'shadow_match') },
+  { index: 96, id: 'mech_missing_domino', name: 'Domino Dot Progression', icon: '🁣', category: 'Observation', summary: 'Identify missing sequence domino', type: 'find_odd', generator: (s) => generateFindOdd(s, 2) },
+  { index: 97, id: 'mech_mosquito_swat', name: 'Darting Mosquito Swat', icon: '🦟', category: 'Floating Target', summary: 'Swat erratic flying mosquito with one tap', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'moving_target') },
+  { index: 98, id: 'mech_hot_potato', name: 'Hot Potato Quick Tap', icon: '🥔', category: 'Floating Target', summary: 'Tap sizzling potato before it bursts', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'avoid_bomb') },
+  { index: 99, id: 'mech_trap_or_gold', name: 'Mimic Chest vs Gold', icon: '🧰', category: 'Hazard Choice', summary: 'Discern real gold chest from sharp-toothed mimic', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'key_and_lock') },
+  { index: 100, id: 'mech_emergency_eject', name: 'Emergency Cockpit Eject', icon: '🚨', category: 'Circuit & Switch', summary: 'Pull canopy ejection lever in flaming jet', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'light_switch') },
+
+  // 101 - 180: Themes 1 to 8 Set
+  { index: 101, id: 'mech_biometric_fp', name: 'Biometric Fingerprint', icon: '🔍', category: 'Observation', summary: 'Match authorized whorl fingerprint', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'safe_tile') },
+  { index: 102, id: 'mech_cut_alarm_sensor', name: 'Laser Alarm Breaker', icon: '🚨', category: 'Circuit & Switch', summary: 'Sever optical alarm wire relay', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'wire_connect') },
+  { index: 103, id: 'mech_pin_scramble', name: 'PIN Keypad Scramble', icon: '🔢', category: 'Hazard Choice', summary: 'Tap highlighted target key on scrambled keypad', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'unlock_code') },
+  { index: 104, id: 'mech_data_stream_catch', name: 'Data Stream Catch', icon: '💾', category: 'Action Lane', summary: 'Intercept golden encryption packet', type: 'lane_action', generator: (s) => generateLaneAction(s, 'coin_catch') },
+  { index: 105, id: 'mech_firewall_breaker', name: 'Firewall Probe Shot', icon: '🧱', category: 'Timing', summary: 'Shoot data packet through firewall gap', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 106, id: 'mech_ransomware_decrypt', name: 'Ransomware Alphabetize', icon: '🦠', category: 'Order & Speed', summary: 'Sort cipher keys in alphabetical order', type: 'order_sequence', generator: (s) => generateOrderSequence(s, true) },
+  { index: 107, id: 'mech_vault_stethoscope', name: 'Vault Tumbler Click', icon: '🎧', category: 'Tension Meter', summary: 'Stop dial on acoustic tumbler click', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'knife_throw') },
+  { index: 108, id: 'mech_cctv_blindspot', name: 'CCTV Camera Cone Dash', icon: '📹', category: 'Floating Target', summary: 'Tap spy running in camera blind zone', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'moving_target') },
+  { index: 109, id: 'mech_override_key_turn', name: 'Dual Key Override', icon: '🔑', category: 'Agility', summary: 'Turn override key in matching direction', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 110, id: 'mech_server_eject', name: 'Hot Server Core Eject', icon: '💽', category: 'Circuit & Switch', summary: 'Pull overheated blade from server rack', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'gear_match') },
+  { index: 111, id: 'mech_catch_egg', name: 'Falling Egg Pan Catch', icon: '🍳', category: 'Action Lane', summary: 'Catch rolling egg in skillet before impact', type: 'lane_action', generator: (s) => generateLaneAction(s, 'catch_star') },
+  { index: 112, id: 'mech_pancake_flip', name: 'Pancake Air Flip', icon: '🥞', category: 'Tension Meter', summary: 'Catch flipped pancake golden side down', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bottle_flip') },
+  { index: 113, id: 'mech_grease_fire', name: 'Extinguish Grease Fire', icon: '🧯', category: 'Hazard Choice', summary: 'Smother stove flames with lid, never water', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'floor_is_lava') },
+  { index: 114, id: 'mech_sushi_slice', name: 'Sushi Sashimi Slices', icon: '🍣', category: 'Agility', summary: 'Execute clean directional knife slice', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 115, id: 'mech_soda_pop', name: 'Shaken Soda Can Vent', icon: '🥤', category: 'Tension Meter', summary: 'Vent carbonation pressure without explosion', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'power_charge') },
+  { index: 116, id: 'mech_toast_popup', name: 'Airborne Toast Catch', icon: '🍞', category: 'Action Lane', summary: 'Snatch popped toast slice from toaster', type: 'lane_action', generator: (s) => generateLaneAction(s, 'falling_object') },
+  { index: 117, id: 'mech_wasabi_or_guac', name: 'Wasabi vs Guacamole', icon: '🥑', category: 'Hazard Choice', summary: 'Add guacamole, reject fiery green wasabi', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'color_pour') },
+  { index: 118, id: 'mech_soup_seasoning', name: 'Soup Seasoning Balance', icon: '🧂', category: 'Tension Meter', summary: 'Season soup broth into green balance window', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 119, id: 'mech_stop_blender', name: 'Blender Lid Clamp', icon: '🌪️', category: 'Impulse Control', summary: 'Hold lid still until vortex motor stops', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'dont_do_anything') },
+  { index: 120, id: 'mech_pizza_cutter', name: '4-Quarter Pizza Slice', icon: '🍕', category: 'Agility', summary: 'Cut cross-section slice down the middle', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, true) },
+  { index: 121, id: 'mech_docking_ring', name: 'Orbital Docking Collar', icon: '🛰️', category: 'Tension Meter', summary: 'Mesh rotating space station collar teeth', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'rocket_landing') },
+  { index: 122, id: 'mech_meteor_laser', name: 'Laser Meteor Turret', icon: '☄️', category: 'Floating Target', summary: 'Blast incoming asteroid with laser cannon', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'balloon_burst') },
+  { index: 123, id: 'mech_airlock_seal', name: 'Airlock Crank Seal', icon: '🚀', category: 'Twitch Reflex', summary: 'Mash crank wheel to seal depressurizing hatch', type: 'tap_count', generator: (s) => generateTapCount(s, 5) },
+  { index: 124, id: 'mech_asteroid_slingshot', name: 'Slingshot Gravity Arc', icon: '🪐', category: 'Timing', summary: 'Release gravity slingshot at orbital vector', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 125, id: 'mech_solar_flare_shield', name: 'Solar Flare Shield', icon: '☀️', category: 'Agility', summary: 'Swipe thermal shield over sunlit hull', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 126, id: 'mech_thruster_burn', name: 'Lunar Thruster Level', icon: '🔥', category: 'Tension Meter', summary: 'Stabilize lander thruster during descent', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'rocket_launch') },
+  { index: 127, id: 'mech_radio_freq', name: 'Oscilloscope Wave Tune', icon: '📻', category: 'Tension Meter', summary: 'Tune radio dial to resonance frequency', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 128, id: 'mech_alien_egg_hold', name: "Don't Breathe Alien Egg", icon: '🥚', category: 'Impulse Control', summary: 'Hold dead still while alien egg opens', type: 'dont_touch', generator: (s) => generateDontTouch(s, 'alien_egg') },
+  { index: 129, id: 'mech_spacewalk_tether', name: 'Spacewalk Tether Clamp', icon: '👨‍🚀', category: 'Timing', summary: 'Latch safety carabiner onto airlock ring', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 130, id: 'mech_hyperspace_coords', name: 'Hyperspace Star Nav', icon: '✨', category: 'Observation', summary: 'Select stellar nav alignment coordinate', type: 'shape_match', generator: (s) => generateShapeMatch(s) },
+  { index: 131, id: 'mech_snake_strike', name: 'Viper Strike Jump', icon: '🐍', category: 'Action Lane', summary: 'Shift out of viper striking path', type: 'lane_action', generator: (s) => generateLaneAction(s, 'knife_dodge') },
+  { index: 132, id: 'mech_chameleon_tongue', name: 'Chameleon Fly Snatch', icon: '🦎', category: 'Floating Target', summary: 'Flick tongue and snag flying insect', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'pop_bubbles') },
+  { index: 133, id: 'mech_crocodile_river', name: 'Crocodile Log Crossing', icon: '🐊', category: 'Hazard Choice', summary: 'Step on real driftwood, avoid crocodile snout', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'safe_tile') },
+  { index: 134, id: 'mech_bee_swarm_duck', name: 'Duck Bee Swarm', icon: '🐝', category: 'Action Lane', summary: 'Dodge away from approaching hornet swarm', type: 'lane_action', generator: (s) => generateLaneAction(s, 'meteor_dodge') },
+  { index: 135, id: 'mech_catch_salmon', name: 'Bear Waterfall Catch', icon: '🐻', category: 'Action Lane', summary: 'Line up bear paws under leaping salmon', type: 'lane_action', generator: (s) => generateLaneAction(s, 'catch_star') },
+  { index: 136, id: 'mech_piranha_water_dip', name: 'Piranha Ring Retrieve', icon: '🐟', category: 'Floating Target', summary: 'Fish gold ring out without brushing piranha', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'avoid_bomb') },
+  { index: 137, id: 'mech_spider_web_switch', name: 'Dewdrop Spider Silk', icon: '🕸️', category: 'Circuit & Switch', summary: 'Route morning dewdrop to dry silk junction', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'pipe_connect') },
+  { index: 138, id: 'mech_bull_matador', name: 'Charging Bull Side-Step', icon: '🐂', category: 'Action Lane', summary: 'Side-step charging bull at last instant', type: 'lane_action', generator: (s) => generateLaneAction(s, 'laser_dodge') },
+  { index: 139, id: 'mech_owl_night_vision', name: 'Night Owl Eye Spot', icon: '🦉', category: 'Floating Target', summary: 'Spot glowing eyes in pitch dark woods', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'final_target') },
+  { index: 140, id: 'mech_ant_colony_bridge', name: 'Ant Chain Bridge Mash', icon: '🐜', category: 'Twitch Reflex', summary: 'Mash screen to link living ant bridge', type: 'tap_count', generator: (s) => generateTapCount(s, 5) },
+  { index: 141, id: 'mech_conveyor_sledgehammer', name: 'Cracked Gear Sledge', icon: '🔨', category: 'Observation', summary: 'Spot defective cog on high-speed conveyor', type: 'find_odd', generator: (s) => generateFindOdd(s, 0) },
+  { index: 142, id: 'mech_steam_valve_bleed', name: 'Boiler Steam Bleed', icon: '💨', category: 'Tension Meter', summary: 'Bleed boiler pressure before tank ruptures', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 143, id: 'mech_crane_magnet_drop', name: 'Steel Beam Crane Drop', icon: '🧲', category: 'Tension Meter', summary: 'Drop suspended I-beam into flatbed truck', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bullseye') },
+  { index: 144, id: 'mech_chainsaw_cut', name: 'Lumberjack Laser Cut', icon: '🪚', category: 'Tension Meter', summary: 'Halt spinning blade right on trunk crossmark', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'knife_throw') },
+  { index: 145, id: 'mech_molten_metal_pour', name: 'Molten Bronze Ingot', icon: '🌋', category: 'Tension Meter', summary: 'Fill steel ingot mold without spilling over', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bottle_flip') },
+  { index: 146, id: 'mech_hydraulic_press_snatch', name: 'Hydraulic Press Snatch', icon: '🦾', category: 'Tension Meter', summary: 'Snatch coin before piston slams downward', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'power_charge') },
+  { index: 147, id: 'mech_assembly_nut_bolt', name: 'Hex Nut Fastener', icon: '🔩', category: 'Order & Speed', summary: 'Thread matching hex bolt in order', type: 'order_sequence', generator: (s) => generateOrderSequence(s, false) },
+  { index: 148, id: 'mech_hazard_gate_drop', name: 'Crash Gate Emergency', icon: '🚧', category: 'Timing', summary: 'Drop safety crash gate before runaway cart', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 149, id: 'mech_pipe_pressure_clamp', name: 'Oil Leak Rubber Clamp', icon: '🛢️', category: 'Circuit & Switch', summary: 'Clamp ruptured industrial oil pipeline', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'pipe_connect') },
+  { index: 150, id: 'mech_blown_fuse_replace', name: 'Blown Fuse Swap', icon: '💡', category: 'Circuit & Switch', summary: 'Replace burnt fuse to power factory', type: 'wire_switch', generator: (s) => generateWireSwitch(s, 'light_switch') },
+  { index: 151, id: 'mech_defibrillator_shock', name: 'Defibrillator Shock Sync', icon: '⚡', category: 'Timing', summary: 'Discharge paddles when cardiac ECG aligns', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 152, id: 'mech_splinter_extraction', name: 'Precision Tweezers Pull', icon: '🩹', category: 'Timing', summary: 'Extract deep splinter without slipping', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 153, id: 'mech_iv_drip_meter', name: 'IV Fluid Drip Rate', icon: '💧', category: 'Tension Meter', summary: 'Calibrate IV medication drip tempo', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'temperature_control') },
+  { index: 154, id: 'mech_heartbeat_valve', name: 'Lub-Dub Stethoscope', icon: '🫀', category: 'Twitch Reflex', summary: 'Tap screen to sync with heart valve rhythm', type: 'tap_count', generator: (s) => generateTapCount(s, 3) },
+  { index: 155, id: 'mech_blood_type_triage', name: 'Emergency O- Blood Match', icon: '🩸', category: 'Hazard Choice', summary: 'Pick universal donor O- transfusion bag', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'color_pour') },
+  { index: 156, id: 'mech_xray_fracture_spot', name: 'X-Ray Fracture Spot', icon: '🦴', category: 'Observation', summary: 'Spot hair-line bone fracture on X-ray', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
+  { index: 157, id: 'mech_oxygen_valve_twist', name: 'Oxygen Tank Twist', icon: '🤿', category: 'Agility', summary: 'Twist valve wheel counter-clockwise', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 158, id: 'mech_pupil_reflex', name: 'Pupil Light Contraction', icon: '👁️', category: 'Tension Meter', summary: 'Observe pupil contract under flashlight', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bullseye') },
+  { index: 159, id: 'mech_tourniquet_cinch', name: 'Tourniquet Rapid Cinch', icon: '🩺', category: 'Twitch Reflex', summary: 'Mash buckle to tighten artery tourniquet', type: 'tap_count', generator: (s) => generateTapCount(s, 4) },
+  { index: 160, id: 'mech_mercury_shake', name: 'Fever Thermometer Reset', icon: '🌡️', category: 'Twitch Reflex', summary: 'Mash downwards to shake mercury down', type: 'tap_count', generator: (s) => generateTapCount(s, 5) },
+  { index: 161, id: 'mech_pong_paddle', name: 'Pong High-Speed Volley', icon: '🏓', category: 'Tension Meter', summary: 'Return 8-bit ball off paddle edge', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bottle_flip') },
+  { index: 162, id: 'mech_brick_powerup_catch', name: 'Retro Powerup Catch', icon: '🧱', category: 'Action Lane', summary: 'Catch arcade multiplier capsule', type: 'lane_action', generator: (s) => generateLaneAction(s, 'catch_star') },
+  { index: 163, id: 'mech_space_invader_bomb', name: 'Pixel Alien Bomb Snip', icon: '👾', category: 'Timing', summary: 'Snipe dropping alien missile mid-flight', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 164, id: 'mech_snake_90deg_turn', name: 'Snake Grid 90° Turn', icon: '🟩', category: 'Agility', summary: 'Execute sharp 90-degree corner turn', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, false) },
+  { index: 165, id: 'mech_slot_triple_7', name: 'Slot Machine Triple 7', icon: '🎰', category: 'Tension Meter', summary: 'Halt spinning reel on golden 7', type: 'tension_meter', generator: (s) => generateTensionMeter(s, 'bullseye') },
+  { index: 166, id: 'mech_pixel_boss_mash', name: 'Pixel Boss Shield Mash', icon: '👹', category: 'Twitch Reflex', summary: 'Mash attack while boss barrier is breached', type: 'tap_count', generator: (s) => generateTapCount(s, 6) },
+  { index: 167, id: 'mech_pac_ghost_evade', name: 'Pac-Maze Ghost Evade', icon: '🟡', category: 'Action Lane', summary: 'Dodge oncoming red chaser ghost', type: 'lane_action', generator: (s) => generateLaneAction(s, 'knife_dodge') },
+  { index: 168, id: 'mech_platform_pit_jump', name: '8-Bit Ledge Spring Jump', icon: '🕳️', category: 'Timing', summary: 'Time jump right as boots clear platform edge', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 169, id: 'mech_whack_a_pixel', name: 'Whack-A-Pixel Burrow', icon: '🦔', category: 'Floating Target', summary: 'Whack mole before it burrows back down', type: 'floating_target', generator: (s) => generateFloatingTarget(s, 'moving_target') },
+  { index: 170, id: 'mech_pinball_flipper', name: 'Pinball Flipper Rebound', icon: '🕹️', category: 'Timing', summary: 'Trigger flipper at apex of ball drop', type: 'stop_target', generator: (s) => generateStopTarget(s) },
+  { index: 171, id: 'mech_reverse_clockwise', name: 'Opposite Spin Swipe', icon: '🔄', category: 'Mental Trick', summary: 'Swipe in opposite direction of spin', type: 'swipe_direction', generator: (s) => generateSwipeDirection(s, true) },
+  { index: 172, id: 'mech_simon_says_color', name: 'Simon Color Inversion', icon: '🗣️', category: 'Mental Trick', summary: 'Obey colored word text, ignore spoken color', type: 'color_tap', generator: (s) => generateColorTap(s, true) },
+  { index: 173, id: 'mech_lie_detector', name: '2+2=5 Lie Detector', icon: '🤥', category: 'Hazard Choice', summary: 'Flag mathematical fallacy as a LIE', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'which_door') },
+  { index: 174, id: 'mech_missing_glove', name: 'Glove Anomaly Spot', icon: '👏', category: 'Observation', summary: 'Identify hand missing safety glove', type: 'find_odd', generator: (s) => generateFindOdd(s, 2) },
+  { index: 175, id: 'mech_hidden_hotspot', name: 'Invisible Button Radar', icon: '👻', category: 'Observation', summary: 'Locate subtle faint pulse radar hotspot', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
+  { index: 176, id: 'mech_blink_counter', name: 'Rapid Flash Count', icon: '💡', category: 'Speed Math', summary: 'Count number of rapid bulb strobe pulses', type: 'quick_math', generator: (s) => generateQuickMath(s, 'parity') },
+  { index: 177, id: 'mech_upside_down_calc', name: '07734 Upside-Down Word', icon: '🙃', category: 'Observation', summary: 'Decipher upside-down calculator display', type: 'find_odd', generator: (s) => generateFindOdd(s, 0) },
+  { index: 178, id: 'mech_speed_typo_hunter', name: 'TENSI0N Typo Spot', icon: '🔤', category: 'Observation', summary: 'Spot zero disguised as letter O in title', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
+  { index: 179, id: 'mech_siren_trap', name: 'Safe vs Danger Trap', icon: '🚨', category: 'Hazard Choice', summary: 'Read word SAFE despite red warning glow', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'which_door') },
+  { index: 180, id: 'mech_nuclear_abort', name: 'Nuclear Abort Keycode', icon: '☢️', category: 'Order & Speed', summary: 'Input 3-symbol abort sequence before ignition', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'unlock_code') },
 ];
 
 /**
- * MechanicsDeckManager: Infinite Shuffled Bag of 50 Unique Mechanics.
- * Guarantees that ALL 50 mechanics appear sequentially without premature repetition.
+ * MechanicsDeckManager: Infinite Shuffled Bag of 180 Unique Mechanics.
+ * Guarantees that ALL 180 mechanics appear sequentially without premature repetition.
  * Tracks discovered mechanics across game sessions in localStorage.
  */
 class MechanicsDeckManager {
@@ -1334,7 +1467,7 @@ class MechanicsDeckManager {
   }
 
   private refillDeck(): void {
-    // Fill deck with indices 0 through 49
+    // Fill deck with all 180 indices (0 to MECHANICS_CATALOG.length - 1)
     const all = Array.from({ length: MECHANICS_CATALOG.length }, (_, i) => i);
     // Fisher-Yates Shuffle
     for (let i = all.length - 1; i > 0; i--) {
@@ -1350,7 +1483,7 @@ class MechanicsDeckManager {
   }
 
   /**
-   * Draws the next mechanic from the shuffled 50-card bag.
+   * Draws the next mechanic from the shuffled 180-card bag.
    */
   public drawNextMechanic(lastType?: ChallengeType): MechanicDefinition {
     if (this.activeDeck.length === 0) {
@@ -1404,8 +1537,8 @@ class MechanicsDeckManager {
 export const mechanicsDeckManager = new MechanicsDeckManager();
 
 /**
- * Generates the next challenge drawn directly from the 50-card shuffled deck.
- * Guaranteed variety: each of the 50 mechanics appears in order before any repeat!
+ * Generates the next challenge drawn directly from the 180-card shuffled deck.
+ * Guaranteed variety: each of the 180 mechanics appears in order before any repeat!
  */
 export function generateNextChallenge(score: number, lastType?: ChallengeType): Challenge {
   const mechanic = mechanicsDeckManager.drawNextMechanic(lastType);

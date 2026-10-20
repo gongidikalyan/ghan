@@ -10,7 +10,7 @@ export type ChallengeType =
   | 'rock_paper_scissors'
   | 'shape_match'
   | 'order_sequence'
-  // 50 Speed n Tension Extended Engines
+  // 180 Speed n Tension Extended Engines
   | 'lane_action'
   | 'tension_meter'
   | 'floating_target'

@@ -99,7 +99,10 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full flex flex-col justify-between py-2 select-none">
+    <div 
+      className="flex-1 w-full flex flex-col justify-between py-2 select-none cursor-pointer"
+      onClick={handleStopTap}
+    >
       {/* Title & Instruction */}
       <div className="text-center px-4">
         <h2 className={`text-2xl sm:text-3xl font-black font-display tracking-tight mb-1 uppercase ${
@@ -178,12 +181,19 @@ export const TensionMeterChallenge: React.FC<TensionMeterChallengeProps> = ({
       <div className="w-full max-w-xs mx-auto px-2">
         <button
           type="button"
-          onClick={handleStopTap}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleStopTap();
+          }}
           className="w-full h-18 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black font-display text-2xl tracking-wider uppercase shadow-xl shadow-rose-600/30 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-rose-400/40"
         >
           <Zap className="w-6 h-6 fill-white" />
           {meterType === 'rapid_mash' ? 'PULL!' : 'STOP NOW!'}
         </button>
+      </div>
+
+      <div className="text-center text-xs text-slate-500 font-medium">
+        {meterType === 'rapid_mash' ? 'Mash button or screen' : 'Tap button or screen to stop'}
       </div>
     </div>
   );

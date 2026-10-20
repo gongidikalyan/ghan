@@ -98,7 +98,7 @@ export const InterstitialAdModal: React.FC<InterstitialAdModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label="Sponsored Advertisement"
@@ -156,7 +156,7 @@ export const InterstitialAdModal: React.FC<InterstitialAdModalProps> = ({
         <div className={`flex-1 p-6 flex flex-col justify-between bg-gradient-to-b ${campaign.gradient}`}>
           {/* Hero Ad Icon / Visual */}
           <div className="flex flex-col items-center justify-center my-auto text-center">
-            <div className="w-24 h-24 rounded-3xl bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center text-5xl mb-4 shadow-2xl animate-pulse">
+            <div className="w-24 h-24 rounded-3xl bg-white/20 border border-white/30 flex items-center justify-center text-5xl mb-4 shadow-2xl animate-pulse">
               {campaign.icon}
             </div>
 
