@@ -40,7 +40,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
 import { adManager } from './utils/adManager';
-import { showPlatformAd, forceRepaint } from './config/admob';
+import { showPlatformAd, preloadPlatformAd } from './config/admob';
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
@@ -93,7 +93,7 @@ export default function App() {
   const [inputLocked, setInputLocked] = useState<boolean>(false);
   const runStartTimeRef = useRef<number>(performance.now());
 
-  const isLight = settings.colorMode === 'light';
+  const isLight = true;
 
   // Initialize sound settings
   useEffect(() => {
@@ -102,39 +102,35 @@ export default function App() {
     hapticManager.enabled = settings.hapticsEnabled;
   }, [settings]);
 
-  // Synchronize light/dark class, background styles, and browser theme-color meta tag
+  // Safety watchdog: Prevent the ad loading overlay from ever getting stuck on screen
+  useEffect(() => {
+    if (!isPlatformAdLoading) return;
+    const timeout = setTimeout(() => {
+      setIsPlatformAdLoading(false);
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [isPlatformAdLoading]);
+
+  // Synchronize light class, background styles, and browser theme-color meta tag
   useEffect(() => {
     const root = document.documentElement;
-    const isLightMode = settings.colorMode === 'light';
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
 
-    if (isLightMode) {
-      root.classList.remove('dark');
-      root.classList.add('light');
-      root.style.colorScheme = 'light';
-      root.style.backgroundColor = '#f8fafc';
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#0f172a';
-      if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
-      if (metaColorScheme) metaColorScheme.setAttribute('content', 'light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
-      root.style.colorScheme = 'dark';
-      root.style.backgroundColor = '#020617';
-      document.body.style.backgroundColor = '#020617';
-      document.body.style.color = '#f8fafc';
-      if (metaTheme) metaTheme.setAttribute('content', '#020617');
-      if (metaColorScheme) metaColorScheme.setAttribute('content', 'dark');
-    }
-  }, [settings.colorMode]);
+    root.classList.remove('dark');
+    root.classList.add('light');
+    root.style.colorScheme = 'light';
+    root.style.backgroundColor = '#f8fafc';
+    document.body.style.backgroundColor = '#f8fafc';
+    document.body.style.color = '#0f172a';
+    if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
+    if (metaColorScheme) metaColorScheme.setAttribute('content', 'light');
+  }, []);
 
-  // Ensure Android WebView repaints and re-awakens audio when returning from native ads or app background
+  // Ensure Android WebView re-awakens audio when returning from native ads or app background
   useEffect(() => {
     const handleResume = () => {
       soundManager.init();
-      forceRepaint();
     };
 
     const handleVisibilityChange = () => {
@@ -162,6 +158,7 @@ export default function App() {
 
     const runDurationMs = performance.now() - runStartTimeRef.current;
     adManager.recordRunCompleted(score, runDurationMs);
+    preloadPlatformAd();
 
     if (timerRef.current) {
       cancelAnimationFrame(timerRef.current);
@@ -356,22 +353,36 @@ export default function App() {
   // Post-Game Over navigation hooks with real platform / AdMob interstitial ads
   const handleGameOverRetry = async () => {
     if (adManager.shouldShowInterstitial(score)) {
-      adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      await showPlatformAd();
-      setIsPlatformAdLoading(false);
-      forceRepaint();
+      try {
+        const shown = await showPlatformAd();
+        if (shown) {
+          adManager.recordAdShown();
+        }
+      } catch (err) {
+        console.warn('Ad error during retry:', err);
+      } finally {
+        setIsPlatformAdLoading(false);
+        forceRepaint();
+      }
     }
     startNewRun();
   };
 
   const handleGameOverHome = async () => {
     if (adManager.shouldShowInterstitial(score)) {
-      adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      await showPlatformAd();
-      setIsPlatformAdLoading(false);
-      forceRepaint();
+      try {
+        const shown = await showPlatformAd();
+        if (shown) {
+          adManager.recordAdShown();
+        }
+      } catch (err) {
+        console.warn('Ad error during home transition:', err);
+      } finally {
+        setIsPlatformAdLoading(false);
+        forceRepaint();
+      }
     }
     setScreen('HOME');
   };
@@ -391,14 +402,6 @@ export default function App() {
   const handleUpdateSettings = (newSettings: GameSettings) => {
     setSettings(newSettings);
     saveGameSettings(newSettings);
-  };
-
-  const handleToggleColorMode = () => {
-    const nextMode: ColorMode = isLight ? 'dark' : 'light';
-    const updated = { ...settings, colorMode: nextMode };
-    setSettings(updated);
-    saveGameSettings(updated);
-    soundManager.playTap();
   };
 
   const handleResetStats = () => {
@@ -479,7 +482,6 @@ export default function App() {
           <HomeScreen
             stats={stats}
             colorMode={settings.colorMode}
-            onToggleColorMode={handleToggleColorMode}
             onPlay={startNewRun}
             onOpenStats={() => setIsStatsOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}

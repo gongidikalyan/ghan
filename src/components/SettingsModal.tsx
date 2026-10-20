@@ -30,13 +30,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const isLight = settings.colorMode === 'light';
-
-  const toggleColorMode = () => {
-    const next: ColorMode = settings.colorMode === 'light' ? 'dark' : 'light';
-    onUpdateSettings({ ...settings, colorMode: next });
-    soundManager.playTap();
-  };
-
   const toggleSound = () => {
     const next = !settings.soundEnabled;
     soundManager.enabled = next;
@@ -96,37 +89,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Setting Items */}
         <div className="flex flex-col gap-2.5">
-          {/* Light / Dark Mode Toggle */}
-          <div className={`flex items-center justify-between p-3.5 rounded-2xl border ${
-            isLight
-              ? 'bg-slate-50 border-slate-200/90'
-              : 'bg-slate-950/60 border-slate-800/80'
-          }`}>
-            <div className="flex items-center gap-3">
-              {isLight ? (
-                <Sun className="w-5 h-5 text-amber-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-indigo-400" />
-              )}
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">Theme Mode</span>
-                <span className="text-[11px] text-slate-500">
-                  {isLight ? 'Light Theme (Bright)' : 'Dark Theme (Night)'}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={toggleColorMode}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all flex items-center gap-1.5 border ${
-                isLight
-                  ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
-                  : 'bg-slate-800 border-slate-700 text-white'
-              }`}
-            >
-              {isLight ? 'Light' : 'Dark'}
-            </button>
-          </div>
 
           {/* Sound FX */}
           <div className={`flex items-center justify-between p-3.5 rounded-2xl border ${

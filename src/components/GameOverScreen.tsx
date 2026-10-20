@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { RotateCcw, Home, Trophy, Share2, Flame, Check, Zap } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { ColorMode } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { hapticManager } from '../utils/haptics';
@@ -30,21 +29,15 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const isLight = colorMode === 'light';
 
+  const [showCelebration, setShowCelebration] = useState<boolean>(false);
+
   useEffect(() => {
     if (isNewBest && score > 0) {
       soundManager.playNewBest();
       hapticManager.newBestPattern();
-
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899'],
-        });
-      } catch {
-        // Fallback gracefully
-      }
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 3000);
+      return () => clearTimeout(timer);
     }
   }, [isNewBest, score]);
 

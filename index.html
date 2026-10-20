@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -10,49 +10,27 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#020617" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta name="color-scheme" content="light" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <script>
       (function() {
         try {
-          var raw = localStorage.getItem('snt_settings');
-          var parsed = raw ? JSON.parse(raw) : null;
-          var isLight = parsed && parsed.colorMode === 'light';
           var doc = document.documentElement;
-          if (isLight) {
-            doc.classList.remove('dark');
-            doc.classList.add('light');
-            doc.style.backgroundColor = '#f8fafc';
-            doc.style.colorScheme = 'light';
-            var meta = document.querySelector('meta[name="theme-color"]');
-            if (meta) meta.setAttribute('content', '#f8fafc');
-          } else {
-            doc.classList.remove('light');
-            doc.classList.add('dark');
-            doc.style.backgroundColor = '#020617';
-            doc.style.colorScheme = 'dark';
-          }
-        } catch (e) {
-          document.documentElement.classList.add('dark');
-        }
+          doc.classList.remove('dark');
+          doc.classList.add('light');
+          doc.style.backgroundColor = '#f8fafc';
+          doc.style.colorScheme = 'light';
+        } catch (e) {}
       })();
     </script>
     <style>
-      html.dark, html.dark body, html.dark #root {
-        background-color: #020617;
-        color: #f8fafc;
-        color-scheme: dark;
-      }
-      html.light, html.light body, html.light #root {
+      html, body, #root {
         background-color: #f8fafc;
         color: #0f172a;
-        color-scheme: light;
-      }
-      html, body, #root {
         margin: 0;
         padding: 0;
         width: 100%;
@@ -66,12 +44,17 @@
         -webkit-user-select: none;
         user-select: none;
       }
+      html.light, html.light body, html.light #root {
+        background-color: #f8fafc;
+        color: #0f172a;
+        color-scheme: light;
+      }
     </style>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
   </head>
   <body class="h-full select-none overflow-hidden touch-manipulation font-sans">
@@ -79,4 +62,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

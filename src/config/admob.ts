@@ -15,15 +15,11 @@ export const ADMOB_CONFIG = {
  * blank / white canvas issues when returning from native overlays or ads.
  */
 export function forceRepaint(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
   try {
-    const doReflow = () => {
-      void document.body?.offsetHeight;
-      window.dispatchEvent(new Event('resize'));
-    };
-    requestAnimationFrame(doReflow);
-    setTimeout(doReflow, 60);
-    setTimeout(doReflow, 180);
+    // A single non-disruptive offset read to flush pending DOM/style updates to the compositor
+    // without triggering window resize events or layout thrashing.
+    void document.body?.offsetHeight;
   } catch {
     // Ignore reflow errors
   }
@@ -35,6 +31,21 @@ export function forceRepaint(): void {
  * - true: native or platform ad was shown AND completed/dismissed
  * - false: no native/platform ad available or failed (caller should display in-app fallback modal)
  */
+/**
+ * Preloads the next interstitial ad on native Android bridge if available.
+ */
+export function preloadPlatformAd(): void {
+  if (!ADMOB_CONFIG.isAdsEnabled) return;
+  const win = window as any;
+  if (typeof win.Android?.preloadInterstitial === 'function') {
+    try {
+      win.Android.preloadInterstitial();
+    } catch {
+      // Ignore
+    }
+  }
+}
+
 export async function showPlatformAd(): Promise<boolean> {
   if (!ADMOB_CONFIG.isAdsEnabled) {
     return false;
@@ -56,25 +67,41 @@ export async function showPlatformAd(): Promise<boolean> {
         resolve(wasHandled);
       };
 
-      // 1. Listen for standard window callbacks from Android Native
+      // Exact handler reference for custom window events so removeEventListener matches
+      const onEventDismiss = () => handleDismiss(true);
+
+      // 1. Listen for standard window callbacks from Android Native bridge
+      const prevOnNativeClosed = win.onNativeAdClosed;
       const prevOnDismiss = win.onInterstitialDismissed;
       const prevOnAdClosed = win.onAdClosed;
       const prevOnAdDismissed = win.onAdDismissed;
 
-      win.onInterstitialDismissed = () => {
-        if (typeof prevOnDismiss === 'function') prevOnDismiss();
-        handleDismiss(true);
+      win.onNativeAdClosed = (shown?: boolean) => {
+        if (typeof prevOnNativeClosed === 'function') {
+          try { prevOnNativeClosed(shown); } catch {}
+        }
+        handleDismiss(shown !== false);
       };
-      win.onAdClosed = () => {
-        if (typeof prevOnAdClosed === 'function') prevOnAdClosed();
-        handleDismiss(true);
+      win.onInterstitialDismissed = (shown?: boolean) => {
+        if (typeof prevOnDismiss === 'function') {
+          try { prevOnDismiss(shown); } catch {}
+        }
+        handleDismiss(shown !== false);
+      };
+      win.onAdClosed = (shown?: boolean) => {
+        if (typeof prevOnAdClosed === 'function') {
+          try { prevOnAdClosed(shown); } catch {}
+        }
+        handleDismiss(shown !== false);
       };
       win.onAdDismissed = () => {
-        if (typeof prevOnAdDismissed === 'function') prevOnAdDismissed();
+        if (typeof prevOnAdDismissed === 'function') {
+          try { prevOnAdDismissed(); } catch {}
+        }
         handleDismiss(true);
       };
 
-      // 2. Listen for custom window events
+      // 2. Custom window events dispatched by native bridge
       const events = [
         'adDismissed',
         'onAdDismissed',
@@ -83,17 +110,17 @@ export async function showPlatformAd(): Promise<boolean> {
         'onAdClosed',
         'INTERSTITIAL_CLOSED',
       ];
-      events.forEach((evt) => window.addEventListener(evt, () => handleDismiss(true), { once: true }));
+      events.forEach((evt) => window.addEventListener(evt, onEventDismiss));
 
       // 3. Document Cordova listener
       const cordovaCloseHandler = () => handleDismiss(true);
-      document.addEventListener('admob.interstitial.events.CLOSE', cordovaCloseHandler, { once: true });
+      document.addEventListener('admob.interstitial.events.CLOSE', cordovaCloseHandler);
 
       // 4. Capacitor event listener
       let capacitorListenerHandle: any = null;
       if (win.Capacitor?.Plugins?.AdMob?.addListener) {
         try {
-          win.Capacitor.Plugins.AdMob.addListener('interstitialDismissed', () => handleDismiss(true)).then((h: any) => {
+          win.Capacitor.Plugins.AdMob.addListener('interstitialDismissed', onEventDismiss).then((h: any) => {
             capacitorListenerHandle = h;
           }).catch(() => {});
         } catch {
@@ -150,12 +177,15 @@ export async function showPlatformAd(): Promise<boolean> {
         window.removeEventListener('pageshow', onWindowFocus);
         document.removeEventListener('visibilitychange', onVisibilityChange);
         document.removeEventListener('admob.interstitial.events.CLOSE', cordovaCloseHandler);
-        events.forEach((evt) => window.removeEventListener(evt, () => handleDismiss(true)));
+        events.forEach((evt) => window.removeEventListener(evt, onEventDismiss));
+
         if (capacitorListenerHandle?.remove) {
           try {
             capacitorListenerHandle.remove();
           } catch {}
         }
+
+        win.onNativeAdClosed = prevOnNativeClosed;
         win.onInterstitialDismissed = prevOnDismiss;
         win.onAdClosed = prevOnAdClosed;
         win.onAdDismissed = prevOnAdDismissed;

@@ -1,11 +1,10 @@
 import React from 'react';
-import { Play, Trophy, BarChart2, Settings, HelpCircle, Sun, Moon } from 'lucide-react';
+import { Play, Trophy, BarChart2, Settings, HelpCircle } from 'lucide-react';
 import { ColorMode, UserStats } from '../types/game';
 
 interface HomeScreenProps {
   stats: UserStats;
   colorMode: ColorMode;
-  onToggleColorMode: () => void;
   onPlay: () => void;
   onOpenStats: () => void;
   onOpenSettings: () => void;
@@ -15,7 +14,6 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   stats,
   colorMode,
-  onToggleColorMode,
   onPlay,
   onOpenStats,
   onOpenSettings,
@@ -42,20 +40,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </button>
 
         <div className="flex items-center gap-1">
-          {/* Quick Light/Dark toggle */}
-          <button
-            type="button"
-            onClick={onToggleColorMode}
-            className={`p-2.5 rounded-xl transition-colors ${
-              isLight
-                ? 'text-amber-600 hover:bg-amber-100/70'
-                : 'text-amber-400 hover:bg-slate-900'
-            }`}
-            title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-            aria-label={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {isLight ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </button>
+          
 
           <button
             type="button"

@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hapticsEnabled: true,
   volume: 0.8,
   quickCountdown: false,
-  colorMode: 'dark',
+  colorMode: 'light',
   theme: 'crimson',
 };
 
@@ -97,7 +97,7 @@ export function loadGameSettings(): GameSettings {
       ...DEFAULT_SETTINGS, 
       ...parsed,
       theme,
-      colorMode: parsed.colorMode || 'light',
+      colorMode: 'light',
     };
   } catch {
     return DEFAULT_SETTINGS;

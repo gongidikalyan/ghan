@@ -42,17 +42,17 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div 
           className="fixed inset-0 w-full h-full flex flex-col items-center justify-center p-6 text-center select-none font-sans"
-          style={{ backgroundColor: '#020617', color: '#f8fafc' }}
+          style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
         >
           <div className="w-20 h-20 rounded-3xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center text-rose-500 mb-6 shadow-xl">
             <AlertTriangle className="w-10 h-10" />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black font-display uppercase tracking-tight mb-2 text-white">
+          <h1 className="text-2xl sm:text-3xl font-black font-display uppercase tracking-tight mb-2 text-slate-900">
             Speed n Tension
           </h1>
 
-          <p className="text-sm text-slate-400 max-w-xs mb-8">
+          <p className="text-sm text-slate-600 max-w-xs mb-8">
             The game encountered a transient device glitch. Tap below to get right back into the action.
           </p>
 

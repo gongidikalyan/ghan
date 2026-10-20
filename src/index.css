@@ -7,12 +7,7 @@
     --font-mono: 'JetBrains Mono', monospace;
   }
 
-  html.dark, html.dark body, html.dark #root {
-    background-color: #020617;
-    color: #f8fafc;
-    color-scheme: dark;
-  }
-
+  
   html.light, html.light body, html.light #root {
     background-color: #f8fafc;
     color: #0f172a;
@@ -20,6 +15,9 @@
   }
 
   html, body, #root {
+    background-color: #f8fafc;
+    color: #0f172a;
+    color-scheme: light;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -56,12 +54,7 @@
 }
 
 /* Pure 2D High-Performance Animations (Zero Android WebView Compositor Flicker) */
-.animate-shake,
-.flash-red-overlay,
-.flash-green-overlay,
-.animate-fade-in {
-  contain: layout style;
-}
+
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
