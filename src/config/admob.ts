@@ -102,50 +102,50 @@ export async function showPlatformAd(): Promise<boolean> {
       }
 
       // 5. Native blur/focus & visibility tracking:
-      // When a native ad opens, the WebView loses focus (blur). When user closes the ad,
-      // the WebView regains focus (focus/pageshow).
-      let nativeAdTookFocus = false;
-
-      const onWindowBlur = () => {
-        nativeAdTookFocus = true;
-      };
-      window.addEventListener('blur', onWindowBlur, { once: true });
+      // When a native ad opens, the WebView loses focus and enters background (document.hidden).
+      // ONLY when user actually closes the ad does the WebView return to foreground.
+      let hasGoneHidden = false;
+      let hiddenStartTime = 0;
 
       const onVisibilityChange = () => {
         if (document.hidden || document.visibilityState === 'hidden') {
-          nativeAdTookFocus = true;
-        } else if (nativeAdTookFocus) {
-          // Returned from native ad activity
-          setTimeout(() => handleDismiss(true), 120);
+          hasGoneHidden = true;
+          hiddenStartTime = Date.now();
+        } else if (hasGoneHidden) {
+          // Native ad activity was dismissed and WebView returned to foreground.
+          // Require at least 800ms of hidden state to ensure user was actually viewing
+          // the ad, not a split-second window animation transition!
+          const elapsed = Date.now() - hiddenStartTime;
+          if (elapsed >= 800) {
+            handleDismiss(true);
+          }
         }
       };
       document.addEventListener('visibilitychange', onVisibilityChange);
 
       const onWindowFocus = () => {
-        if (nativeAdTookFocus) {
-          setTimeout(() => handleDismiss(true), 100);
+        if (hasGoneHidden && (Date.now() - hiddenStartTime >= 800)) {
+          handleDismiss(true);
         }
       };
       window.addEventListener('focus', onWindowFocus);
       window.addEventListener('pageshow', onWindowFocus);
 
-      // 6. Fast 1500ms check: If native ad never took focus (no-fill, not loaded, or offline),
-      // do not leave user hanging on a blank screen. Fall back immediately!
-      const noShowTimer = setTimeout(() => {
-        if (!nativeAdTookFocus && !document.hidden) {
-          handleDismiss(false);
-        }
-      }, 1500);
+      // Listen for explicit failure from native Android (e.g. ad failed to load / no fill)
+      win.onInterstitialFailed = () => {
+        handleDismiss(false);
+      };
+      win.onAdFailed = () => {
+        handleDismiss(false);
+      };
 
-      // 7. Max safety timeout (in case native ad activity stays open and never emits)
+      // Safety timeout: 60 seconds maximum in case native ad activity stays open and never emits
       const safetyTimer = setTimeout(() => {
         handleDismiss(true);
-      }, 45000);
+      }, 60000);
 
       cleanup = () => {
-        clearTimeout(noShowTimer);
         clearTimeout(safetyTimer);
-        window.removeEventListener('blur', onWindowBlur);
         window.removeEventListener('focus', onWindowFocus);
         window.removeEventListener('pageshow', onWindowFocus);
         document.removeEventListener('visibilitychange', onVisibilityChange);
@@ -261,6 +261,6 @@ export async function showPlatformAd(): Promise<boolean> {
     });
   }
 
-  // No native platform ad available -> caller displays in-app InterstitialAdModal
+  // No native platform ad bridge available
   return false;
 }

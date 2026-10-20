@@ -39,7 +39,6 @@ import { GameOverScreen } from './components/GameOverScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
-import { InterstitialAdModal } from './components/ads/InterstitialAdModal';
 import { adManager } from './utils/adManager';
 import { showPlatformAd, forceRepaint } from './config/admob';
 
@@ -93,8 +92,6 @@ export default function App() {
   const transitionTimeoutRef = useRef<number | null>(null);
   const [inputLocked, setInputLocked] = useState<boolean>(false);
   const runStartTimeRef = useRef<number>(performance.now());
-  const [isAdOpen, setIsAdOpen] = useState<boolean>(false);
-  const pendingPostGameOverActionRef = useRef<'RETRY' | 'HOME' | null>(null);
 
   const isLight = settings.colorMode === 'light';
 
@@ -270,7 +267,8 @@ export default function App() {
       lastTickTimeRef.current = now;
 
       // Guard against backgrounding / app suspension: do not subtract background time
-      if (document.hidden || delta > 350) {
+      if (document.hidden || document.visibilityState === 'hidden' || delta > 350) {
+        lastTickTimeRef.current = now;
         timerRef.current = requestAnimationFrame(tick);
         return;
       }
@@ -299,6 +297,20 @@ export default function App() {
 
   // Start new run
   const startNewRun = () => {
+    // If ad is still displayed or document is in background, wait until user returns
+    if (document.hidden || document.visibilityState === 'hidden') {
+      const handleReturnToVisible = () => {
+        if (!document.hidden && document.visibilityState === 'visible') {
+          document.removeEventListener('visibilitychange', handleReturnToVisible);
+          window.removeEventListener('focus', handleReturnToVisible);
+          startNewRun();
+        }
+      };
+      document.addEventListener('visibilitychange', handleReturnToVisible);
+      window.addEventListener('focus', handleReturnToVisible);
+      return;
+    }
+
     soundManager.init();
     runStartTimeRef.current = performance.now();
     if (transitionTimeoutRef.current) {
@@ -341,55 +353,27 @@ export default function App() {
     setScreen('COUNTDOWN');
   };
 
-  // Post-Game Over navigation hooks with frequency-capped interstitial ads
+  // Post-Game Over navigation hooks with real platform / AdMob interstitial ads
   const handleGameOverRetry = async () => {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      const nativeHandled = await showPlatformAd();
+      await showPlatformAd();
       setIsPlatformAdLoading(false);
       forceRepaint();
-
-      if (!nativeHandled) {
-        pendingPostGameOverActionRef.current = 'RETRY';
-        setIsAdOpen(true);
-      } else {
-        startNewRun();
-      }
-    } else {
-      startNewRun();
     }
+    startNewRun();
   };
 
   const handleGameOverHome = async () => {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      const nativeHandled = await showPlatformAd();
+      await showPlatformAd();
       setIsPlatformAdLoading(false);
       forceRepaint();
-
-      if (!nativeHandled) {
-        pendingPostGameOverActionRef.current = 'HOME';
-        setIsAdOpen(true);
-      } else {
-        setScreen('HOME');
-      }
-    } else {
-      setScreen('HOME');
     }
-  };
-
-  const handleAdClosed = () => {
-    setIsAdOpen(false);
-    const pendingAction = pendingPostGameOverActionRef.current;
-    pendingPostGameOverActionRef.current = null;
-
-    if (pendingAction === 'RETRY') {
-      startNewRun();
-    } else if (pendingAction === 'HOME') {
-      setScreen('HOME');
-    }
+    setScreen('HOME');
   };
 
   // Called when countdown finishes
@@ -753,13 +737,6 @@ export default function App() {
         isOpen={isRulesOpen}
         colorMode={settings.colorMode}
         onClose={() => setIsRulesOpen(false)}
-      />
-
-      {/* Post-Game Over Interstitial Ad */}
-      <InterstitialAdModal
-        isOpen={isAdOpen}
-        colorMode={settings.colorMode}
-        onClose={handleAdClosed}
       />
 
       {/* Seamless overlay while native platform ad bridges */}

@@ -33,11 +33,36 @@ export const CountdownScreen: React.FC<CountdownScreenProps> = ({
     }
 
     const stepDuration = quickCountdown ? 450 : 550;
-    const timer = setTimeout(() => {
-      setIndex((prev) => prev + 1);
-    }, stepDuration);
+    let timer: NodeJS.Timeout | null = null;
 
-    return () => clearTimeout(timer);
+    const scheduleStep = () => {
+      // If document is in background or ad is open, pause countdown
+      if (document.hidden || document.visibilityState === 'hidden') {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (!document.hidden && document.visibilityState === 'visible') {
+          setIndex((prev) => prev + 1);
+        }
+      }, stepDuration);
+    };
+
+    const handleVisibility = () => {
+      if (!document.hidden && document.visibilityState === 'visible') {
+        scheduleStep();
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    scheduleStep();
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (timer) clearTimeout(timer);
+    };
   }, [index, steps, quickCountdown, onComplete]);
 
   const currentText = steps[index] || 'GO!';
