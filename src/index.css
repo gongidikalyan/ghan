@@ -5,11 +5,21 @@
     --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html.dark, html.dark body, html.dark #root {
+    background-color: #020617;
+    color: #f8fafc;
     color-scheme: dark;
   }
 
+  html.light, html.light body, html.light #root {
+    background-color: #f8fafc;
+    color: #0f172a;
+    color-scheme: light;
+  }
+
   html, body, #root {
-    background-color: #020617;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -45,24 +55,20 @@
   }
 }
 
-/* GPU Hardware Acceleration & Anti-Flicker in Android WebView */
+/* Pure 2D High-Performance Animations (Zero Android WebView Compositor Flicker) */
 .animate-shake,
 .flash-red-overlay,
 .flash-green-overlay,
 .animate-fade-in {
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-transform-style: preserve-3d;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
+  contain: layout style;
 }
 
 @keyframes shake {
-  0%, 100% { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
-  20% { -webkit-transform: translate3d(-6px, 0, 0); transform: translate3d(-6px, 0, 0); }
-  40% { -webkit-transform: translate3d(6px, 0, 0); transform: translate3d(6px, 0, 0); }
-  60% { -webkit-transform: translate3d(-4px, 0, 0); transform: translate3d(-4px, 0, 0); }
-  80% { -webkit-transform: translate3d(4px, 0, 0); transform: translate3d(4px, 0, 0); }
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
 }
 
 @keyframes flash-red {
@@ -90,8 +96,8 @@
 }
 
 @keyframes scale-up {
-  0% { -webkit-transform: translate3d(0, 0, 0) scale(0.7); transform: translate3d(0, 0, 0) scale(0.7); opacity: 0.6; }
-  100% { -webkit-transform: translate3d(0, 0, 0) scale(1); transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  0% { transform: scale(0.7); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes fade-in {

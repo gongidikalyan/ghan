@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   hapticsEnabled: true,
   volume: 0.8,
   quickCountdown: false,
-  colorMode: 'light',
+  colorMode: 'dark',
   theme: 'crimson',
 };
 

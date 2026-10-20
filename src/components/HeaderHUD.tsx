@@ -81,7 +81,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         isLight ? 'bg-slate-200' : 'bg-slate-800/80'
       }`}>
         <div
-          className={`h-full transition-all duration-75 ease-linear rounded-full ${
+          className={`h-full rounded-full ${
             isUrgent 
               ? 'bg-rose-500 shadow-sm shadow-rose-500/50' 
               : isLight 

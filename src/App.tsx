@@ -41,7 +41,7 @@ import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
 import { InterstitialAdModal } from './components/ads/InterstitialAdModal';
 import { adManager } from './utils/adManager';
-import { showPlatformAd } from './config/admob';
+import { showPlatformAd, forceRepaint } from './config/admob';
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
@@ -55,6 +55,7 @@ export default function App() {
   const [screenShake, setScreenShake] = useState<boolean>(false);
   const [gameOverReason, setGameOverReason] = useState<string>('');
   const [isNewBest, setIsNewBest] = useState<boolean>(false);
+  const [isPlatformAdLoading, setIsPlatformAdLoading] = useState<boolean>(false);
 
   // Stored stats & settings
   const [stats, setStats] = useState<UserStats>(loadUserStats);
@@ -103,6 +104,58 @@ export default function App() {
     soundManager.volume = settings.volume;
     hapticManager.enabled = settings.hapticsEnabled;
   }, [settings]);
+
+  // Synchronize light/dark class, background styles, and browser theme-color meta tag
+  useEffect(() => {
+    const root = document.documentElement;
+    const isLightMode = settings.colorMode === 'light';
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+
+    if (isLightMode) {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      root.style.colorScheme = 'light';
+      root.style.backgroundColor = '#f8fafc';
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#0f172a';
+      if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
+      if (metaColorScheme) metaColorScheme.setAttribute('content', 'light');
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+      root.style.backgroundColor = '#020617';
+      document.body.style.backgroundColor = '#020617';
+      document.body.style.color = '#f8fafc';
+      if (metaTheme) metaTheme.setAttribute('content', '#020617');
+      if (metaColorScheme) metaColorScheme.setAttribute('content', 'dark');
+    }
+  }, [settings.colorMode]);
+
+  // Ensure Android WebView repaints and re-awakens audio when returning from native ads or app background
+  useEffect(() => {
+    const handleResume = () => {
+      soundManager.init();
+      forceRepaint();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && document.visibilityState === 'visible') {
+        handleResume();
+      }
+    };
+
+    window.addEventListener('focus', handleResume);
+    window.addEventListener('pageshow', handleResume);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleResume);
+      window.removeEventListener('pageshow', handleResume);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Handle wrong answer / game over
   const triggerGameOver = useCallback((reason: string) => {
@@ -216,6 +269,12 @@ export default function App() {
       const delta = now - lastTickTimeRef.current;
       lastTickTimeRef.current = now;
 
+      // Guard against backgrounding / app suspension: do not subtract background time
+      if (document.hidden || delta > 350) {
+        timerRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
       setTimeRemaining((prev) => {
         const next = prev - delta;
         if (next <= 0) {
@@ -274,6 +333,11 @@ export default function App() {
       code_puzzle: 0,
     };
 
+    // Pre-generate the first challenge during countdown so it's loaded in memory with 0ms delay
+    const firstChallenge = generateNextChallenge(0);
+    setCurrentChallenge(firstChallenge);
+    setTimeRemaining(firstChallenge.durationMs);
+
     setScreen('COUNTDOWN');
   };
 
@@ -281,7 +345,11 @@ export default function App() {
   const handleGameOverRetry = async () => {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
+      setIsPlatformAdLoading(true);
       const nativeHandled = await showPlatformAd();
+      setIsPlatformAdLoading(false);
+      forceRepaint();
+
       if (!nativeHandled) {
         pendingPostGameOverActionRef.current = 'RETRY';
         setIsAdOpen(true);
@@ -296,7 +364,11 @@ export default function App() {
   const handleGameOverHome = async () => {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
+      setIsPlatformAdLoading(true);
       const nativeHandled = await showPlatformAd();
+      setIsPlatformAdLoading(false);
+      forceRepaint();
+
       if (!nativeHandled) {
         pendingPostGameOverActionRef.current = 'HOME';
         setIsAdOpen(true);
@@ -322,9 +394,11 @@ export default function App() {
 
   // Called when countdown finishes
   const handleCountdownComplete = () => {
-    const firstChallenge = generateNextChallenge(0);
-    setCurrentChallenge(firstChallenge);
-    setTimeRemaining(firstChallenge.durationMs);
+    if (!currentChallenge) {
+      const firstChallenge = generateNextChallenge(0);
+      setCurrentChallenge(firstChallenge);
+      setTimeRemaining(firstChallenge.durationMs);
+    }
     isResolvedRef.current = false;
     setIsInterim(false);
     setScreen('PLAYING');
@@ -388,19 +462,17 @@ export default function App() {
       className={`fixed inset-0 w-full h-full flex flex-col items-center justify-between overflow-hidden select-none font-sans ${
         isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'
       } ${getThemeWrapperClass()}`}
-      style={{ transform: 'translate3d(0, 0, 0)' }}
+      style={{ backgroundColor: isLight ? '#f8fafc' : '#020617' }}
     >
-      {/* Background ambient lighting */}
-      <div className={`absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-300 ${
-        isLight ? 'opacity-25' : 'opacity-30'
-      }`}>
-        <div className={`absolute -top-32 -left-32 w-80 h-80 rounded-full blur-3xl ${
-          isLight ? 'bg-rose-400/30' : 'bg-rose-600/20'
-        }`} />
-        <div className={`absolute -bottom-32 -right-32 w-80 h-80 rounded-full blur-3xl ${
-          isLight ? 'bg-indigo-400/20' : 'bg-indigo-600/20'
-        }`} />
-      </div>
+      {/* Background ambient lighting (Zero-overhead radial gradients, eliminates WebView blur flicker) */}
+      <div
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          backgroundImage: isLight
+            ? 'radial-gradient(circle at 10% 10%, rgba(244, 63, 94, 0.08) 0%, transparent 45%), radial-gradient(circle at 90% 90%, rgba(99, 102, 241, 0.07) 0%, transparent 45%)'
+            : 'radial-gradient(circle at 10% 10%, rgba(244, 63, 94, 0.14) 0%, transparent 50%), radial-gradient(circle at 90% 90%, rgba(99, 102, 241, 0.12) 0%, transparent 50%)',
+        }}
+      />
 
       {/* Interim success flash overlay */}
       <div 
@@ -689,6 +761,25 @@ export default function App() {
         colorMode={settings.colorMode}
         onClose={handleAdClosed}
       />
+
+      {/* Seamless overlay while native platform ad bridges */}
+      {isPlatformAdLoading && (
+        <div 
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center select-none animate-fade-in ${
+            isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-white'
+          }`}
+          style={{ backgroundColor: isLight ? '#f8fafc' : '#020617' }}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="w-12 h-12 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin mb-4" />
+          <p className={`text-xs font-black font-display tracking-widest uppercase ${
+            isLight ? 'text-slate-600' : 'text-slate-300'
+          }`}>
+            Resuming...
+          </p>
+        </div>
+      )}
     </div>
   );
 }
