@@ -240,6 +240,20 @@ export async function showPlatformAd(): Promise<boolean> {
     });
   }
 
+  if (typeof win.AdMobBridge?.showInterstitial === 'function') {
+    return waitForDismissal(() => {
+      win.AdMobBridge.showInterstitial();
+      return true;
+    });
+  }
+
+  if (typeof win.AdMob?.showInterstitial === 'function') {
+    return waitForDismissal(() => {
+      win.AdMob.showInterstitial();
+      return true;
+    });
+  }
+
   // 2. Capacitor AdMob Plugin
   if (win.Capacitor?.Plugins?.AdMob?.showInterstitial) {
     return waitForDismissal(() => {
@@ -264,7 +278,20 @@ export async function showPlatformAd(): Promise<boolean> {
     });
   }
 
-  // 5. Google H5 Game Ad Placement API (adBreak) if running in H5 web container
+  // 5. Dispatch standard CustomEvent so custom WebView handlers can intercept
+  if (typeof win.dispatchEvent === 'function') {
+    try {
+      win.dispatchEvent(new CustomEvent('requestAdMobInterstitial', {
+        detail: {
+          appId: ADMOB_CONFIG.appId,
+          adUnitId: ADMOB_CONFIG.interstitialAdUnitId,
+          publisherId: ADMOB_CONFIG.publisherId,
+        },
+      }));
+    } catch {}
+  }
+
+  // 6. Google H5 Game Ad Placement API (adBreak)
   if (typeof win.adBreak === 'function') {
     return new Promise((resolve) => {
       try {
@@ -278,11 +305,7 @@ export async function showPlatformAd(): Promise<boolean> {
           },
           adBreakDone: (placementInfo: any) => {
             forceRepaint();
-            if (placementInfo?.breakStatus === 'dismissed' || placementInfo?.breakStatus === 'viewed') {
-              resolve(true);
-            } else {
-              resolve(false);
-            }
+            resolve(true);
           },
         });
       } catch {
@@ -293,4 +316,43 @@ export async function showPlatformAd(): Promise<boolean> {
 
   // No native platform ad bridge available
   return false;
+}
+
+/**
+ * Universal AdMob Connector for Android Studio & WebView wrappers
+ */
+export const admobConnector = {
+  config: ADMOB_CONFIG,
+  isNativeDetected: (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const win = window as any;
+    return !!(
+      win.Android?.showInterstitial ||
+      win.Android?.showAd ||
+      win.AndroidInterface?.showInterstitial ||
+      win.AndroidInterface?.showAd ||
+      win.JSBridge?.showInterstitial ||
+      win.AdMobBridge?.showInterstitial ||
+      win.Capacitor?.Plugins?.AdMob ||
+      win.admob?.interstitial ||
+      win.adBreak
+    );
+  },
+  showAd: () => showPlatformAd(),
+  preload: () => preloadPlatformAd(),
+  onDismiss: (shown = true) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('adDismissed', { detail: { shown } }));
+    }
+  },
+  onFailed: (reason = '') => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('adFailed', { detail: { reason } }));
+    }
+  },
+};
+
+if (typeof window !== 'undefined') {
+  (window as any).admobConnector = admobConnector;
+  (window as any).AdMobConnector = admobConnector;
 }

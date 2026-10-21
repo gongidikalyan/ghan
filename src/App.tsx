@@ -40,7 +40,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
 import { adManager } from './utils/adManager';
-import { showPlatformAd, preloadPlatformAd } from './config/admob';
+import { showPlatformAd, preloadPlatformAd, forceRepaint } from './config/admob';
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');

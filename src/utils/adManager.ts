@@ -25,7 +25,7 @@ const DEFAULT_METRICS: AdMetrics = {
 };
 
 // Target frequency: 1 ad for every 2 games
-const GAMES_PER_AD = 2;
+export const GAMES_PER_AD = 2;
 
 class AdManager {
   private metrics: AdMetrics;
@@ -94,6 +94,13 @@ class AdManager {
     this.metrics.activePlaytimeMs = 0;
     this.metrics.lastAdTimestamp = Date.now();
     this.saveMetrics();
+  }
+
+  /**
+   * Returns how many games have been completed since the last ad.
+   */
+  public getGamesSinceLastAd(): number {
+    return this.metrics.gamesSinceLastAd;
   }
 
   /**

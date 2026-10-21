@@ -19,18 +19,45 @@
     <script>
       (function() {
         try {
+          var raw = localStorage.getItem('snt_settings');
+          var parsed = raw ? JSON.parse(raw) : null;
+          var isDark = parsed ? parsed.colorMode === 'dark' : true;
           var doc = document.documentElement;
-          doc.classList.remove('dark');
-          doc.classList.add('light');
-          doc.style.backgroundColor = '#f8fafc';
-          doc.style.colorScheme = 'light';
+          if (isDark) {
+            doc.classList.remove('light');
+            doc.classList.add('dark');
+            doc.style.backgroundColor = '#020617';
+            doc.style.colorScheme = 'dark';
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#020617');
+          } else {
+            doc.classList.remove('dark');
+            doc.classList.add('light');
+            doc.style.backgroundColor = '#f8fafc';
+            doc.style.colorScheme = 'light';
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#f8fafc');
+          }
         } catch (e) {}
       })();
     </script>
+    <!-- Google AdMob / AdSense for Games H5 Connector -->
+    <script async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5776267944392683"
+      crossorigin="anonymous">
+    </script>
+    <script>
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adBreak = window.adConfig = function(o) { adsbygoogle.push(o); };
+      try {
+        window.adConfig({
+          preloadAdBreaks: 'on',
+          sound: 'on',
+        });
+      } catch (e) {}
+    </script>
     <style>
       html, body, #root {
-        background-color: #f8fafc;
-        color: #0f172a;
         margin: 0;
         padding: 0;
         width: 100%;
@@ -43,6 +70,11 @@
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
+      }
+      html.dark, html.dark body, html.dark #root {
+        background-color: #020617;
+        color: #f8fafc;
+        color-scheme: dark;
       }
       html.light, html.light body, html.light #root {
         background-color: #f8fafc;

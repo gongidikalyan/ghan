@@ -3,6 +3,8 @@ import { X, Volume2, VolumeX, Smartphone, Zap, Trash2, Palette, Sun, Moon } from
 import { ColorMode, GameSettings, ThemeId } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { hapticManager } from '../utils/haptics';
+import { adManager } from '../utils/adManager';
+import { ADMOB_CONFIG } from '../config/admob';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -212,6 +214,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Google AdMob Connector Info Card */}
+        <div className={`p-3.5 rounded-2xl border text-xs flex flex-col gap-1.5 ${
+          isLight
+            ? 'bg-slate-50 border-slate-200/90 text-slate-700'
+            : 'bg-slate-950/60 border-slate-800/80 text-slate-300'
+        }`}>
+          <div className="flex items-center justify-between font-bold">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Google AdMob Connector
+            </span>
+            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              Connected
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>Interval</span>
+            <span className="font-semibold">1 Ad every 2 Games</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>Next Interstitial</span>
+            <span className="font-semibold text-rose-500 font-mono">
+              In {adManager.getGamesUntilNextAd()} game{adManager.getGamesUntilNextAd() === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono truncate pt-1 border-t border-slate-200/40 dark:border-slate-800">
+            <span>Ad Unit</span>
+            <span className="truncate max-w-[170px]" title={ADMOB_CONFIG.interstitialAdUnitId}>
+              {ADMOB_CONFIG.interstitialAdUnitId}
+            </span>
           </div>
         </div>
 

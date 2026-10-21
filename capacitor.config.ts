@@ -1,4 +1,12 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+interface CapacitorConfig {
+  appId: string;
+  appName: string;
+  webDir: string;
+  server?: {
+    androidScheme?: string;
+  };
+  plugins?: Record<string, any>;
+}
 
 const config: CapacitorConfig = {
   appId: 'com.speedntension.game',
