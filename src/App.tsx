@@ -353,10 +353,12 @@ export default function App() {
   // Post-Game Over navigation hooks with real Google AdMob interstitial ads
   const handleGameOverRetry = async () => {
     if (adManager.shouldShowInterstitial(score)) {
-      adManager.recordAdShown();
       setIsPlatformAdLoading(true);
       try {
-        await showPlatformAd();
+        const shown = await showPlatformAd();
+        if (shown) {
+          adManager.recordAdShown();
+        }
       } catch (err) {
         console.warn('Ad error during retry:', err);
       } finally {
@@ -369,10 +371,12 @@ export default function App() {
 
   const handleGameOverHome = async () => {
     if (adManager.shouldShowInterstitial(score)) {
-      adManager.recordAdShown();
       setIsPlatformAdLoading(true);
       try {
-        await showPlatformAd();
+        const shown = await showPlatformAd();
+        if (shown) {
+          adManager.recordAdShown();
+        }
       } catch (err) {
         console.warn('Ad error during home transition:', err);
       } finally {
