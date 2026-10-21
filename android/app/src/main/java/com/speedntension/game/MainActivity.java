@@ -97,6 +97,8 @@ public class MainActivity extends BridgeActivity {
             if (!mInterfaceAttached) {
                 mInterfaceAttached = true;
                 bridge.getWebView().addJavascriptInterface(this, "Android");
+                bridge.getWebView().addJavascriptInterface(this, "AndroidInterface");
+                bridge.getWebView().addJavascriptInterface(this, "AdMobBridge");
             }
         }
     }
@@ -201,6 +203,16 @@ public class MainActivity extends BridgeActivity {
                 }, 3500);
             }
         });
+    }
+
+    @JavascriptInterface
+    public void showAd() {
+        showInterstitial();
+    }
+
+    @JavascriptInterface
+    public boolean isAdLoaded() {
+        return mInterstitialAd != null;
     }
 
     private void notifyAdResult(final boolean shown) {
