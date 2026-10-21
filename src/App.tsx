@@ -39,7 +39,6 @@ import { GameOverScreen } from './components/GameOverScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
-import { AdMobInterstitial } from './components/AdMobInterstitial';
 import { adManager } from './utils/adManager';
 import { showPlatformAd, preloadPlatformAd, forceRepaint } from './config/admob';
 
@@ -93,8 +92,6 @@ export default function App() {
   const transitionTimeoutRef = useRef<number | null>(null);
   const [inputLocked, setInputLocked] = useState<boolean>(false);
   const runStartTimeRef = useRef<number>(performance.now());
-  const [isAdMobOpen, setIsAdMobOpen] = useState<boolean>(false);
-  const pendingPostGameOverActionRef = useRef<'RETRY' | 'HOME' | null>(null);
 
   const isLight = settings.colorMode === 'light';
 
@@ -358,21 +355,13 @@ export default function App() {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      let nativeShown = false;
       try {
-        nativeShown = await showPlatformAd();
+        await showPlatformAd();
       } catch (err) {
         console.warn('Ad error during retry:', err);
       } finally {
         setIsPlatformAdLoading(false);
         forceRepaint();
-      }
-
-      if (!nativeShown) {
-        // Bridge not present in this APK wrapper; show Google AdMob Interstitial
-        pendingPostGameOverActionRef.current = 'RETRY';
-        setIsAdMobOpen(true);
-        return;
       }
     }
     startNewRun();
@@ -382,36 +371,16 @@ export default function App() {
     if (adManager.shouldShowInterstitial(score)) {
       adManager.recordAdShown();
       setIsPlatformAdLoading(true);
-      let nativeShown = false;
       try {
-        nativeShown = await showPlatformAd();
+        await showPlatformAd();
       } catch (err) {
         console.warn('Ad error during home transition:', err);
       } finally {
         setIsPlatformAdLoading(false);
         forceRepaint();
       }
-
-      if (!nativeShown) {
-        // Bridge not present in this APK wrapper; show Google AdMob Interstitial
-        pendingPostGameOverActionRef.current = 'HOME';
-        setIsAdMobOpen(true);
-        return;
-      }
     }
     setScreen('HOME');
-  };
-
-  const handleAdMobClosed = () => {
-    setIsAdMobOpen(false);
-    forceRepaint();
-    const action = pendingPostGameOverActionRef.current;
-    pendingPostGameOverActionRef.current = null;
-    if (action === 'RETRY') {
-      startNewRun();
-    } else {
-      setScreen('HOME');
-    }
   };
 
   // Called when countdown finishes
@@ -766,13 +735,6 @@ export default function App() {
         isOpen={isRulesOpen}
         colorMode={settings.colorMode}
         onClose={() => setIsRulesOpen(false)}
-      />
-
-      {/* Real Google AdMob Interstitial Ad */}
-      <AdMobInterstitial
-        isOpen={isAdMobOpen}
-        colorMode={settings.colorMode}
-        onClose={handleAdMobClosed}
       />
 
       {/* Seamless overlay while native platform ad bridges */}
