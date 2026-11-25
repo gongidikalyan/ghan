@@ -1,6 +1,6 @@
 {
   "name": "Speed n Tension",
-  "description": "Speed n Tension: High-octane reaction and micro-challenge survival. One mistake ends your run. How long can you survive the tension?",
+  "description": "Speed n Tension: High-octane reaction and micro-challenge survival. You get 3 lives per run — how long can you survive the tension?",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

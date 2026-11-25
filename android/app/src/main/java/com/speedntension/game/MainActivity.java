@@ -15,20 +15,31 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.OnUserEarnedRewardListener;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.rewarded.RewardItem;
+import com.google.android.gms.ads.rewarded.RewardedAd;
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "SpeedNTensionAds";
     
-    // Live production AdMob unit ID
+    // Live production AdMob unit IDs
     private static final String LIVE_AD_UNIT_ID = "ca-app-pub-5776267944392683/8620193138";
+    private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-5776267944392683/7428238224";
     
     private static final int LIGHT_BG_COLOR = Color.parseColor("#f8fafc");
 
     private InterstitialAd mInterstitialAd;
     private boolean mIsLoadingAd = false;
     private boolean mShowWhenLoaded = false;
+
+    private RewardedAd mRewardedAd;
+    private boolean mIsLoadingRewardedAd = false;
+    private boolean mShowRewardedWhenLoaded = false;
+    private boolean mUserEarnedReward = false;
+
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     private boolean mInterfaceAttached = false;
@@ -52,6 +63,7 @@ public class MainActivity extends BridgeActivity {
             MobileAds.initialize(this, initializationStatus -> {
                 Log.d(TAG, "MobileAds initialized successfully");
                 loadInterstitialAd();
+                loadRewardedAd();
             });
         } catch (Exception e) {
             Log.e(TAG, "Error initializing MobileAds", e);
@@ -64,6 +76,9 @@ public class MainActivity extends BridgeActivity {
         applyLightBackgrounds();
         if (mInterstitialAd == null && !mIsLoadingAd) {
             loadInterstitialAd();
+        }
+        if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+            loadRewardedAd();
         }
     }
 
@@ -229,6 +244,171 @@ public class MainActivity extends BridgeActivity {
                       "if (typeof window.onAdFailed === 'function') { window.onAdFailed(); } " +
                       "if (typeof window.onInterstitialFailed === 'function') { window.onInterstitialFailed(); } " +
                       "window.dispatchEvent(new CustomEvent('adClosed', { detail: { shown: false } }));";
+                bridge.getWebView().evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private void loadRewardedAd() {
+        if (mIsLoadingRewardedAd || mRewardedAd != null) {
+            return;
+        }
+
+        mIsLoadingRewardedAd = true;
+        Log.d(TAG, "Loading live rewarded ad: " + LIVE_REWARDED_AD_UNIT_ID);
+
+        AdRequest adRequest = new AdRequest.Builder().build();
+        RewardedAd.load(
+            this,
+            LIVE_REWARDED_AD_UNIT_ID,
+            adRequest,
+            new RewardedAdLoadCallback() {
+                @Override
+                public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
+                    mRewardedAd = rewardedAd;
+                    mIsLoadingRewardedAd = false;
+                    Log.d(TAG, "Live rewarded ad loaded successfully and ready");
+
+                    mRewardedAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                        @Override
+                        public void onAdShowedFullScreenContent() {
+                            Log.d(TAG, "Rewarded Ad showed fullscreen content");
+                            mUserEarnedReward = false;
+                        }
+
+                        @Override
+                        public void onAdDismissedFullScreenContent() {
+                            final boolean earned = mUserEarnedReward;
+                            Log.d(TAG, "Rewarded Ad dismissed by player (earned=" + earned + ")");
+                            mRewardedAd = null;
+                            mUserEarnedReward = false;
+                            loadRewardedAd();
+                            notifyRewardedAdDismissed(earned);
+                        }
+
+                        @Override
+                        public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                            Log.e(TAG, "Rewarded Ad failed to show: " + adError.getMessage());
+                            mRewardedAd = null;
+                            mUserEarnedReward = false;
+                            loadRewardedAd();
+                            notifyRewardedAdFailed();
+                        }
+                    });
+
+                    if (mShowRewardedWhenLoaded) {
+                        mShowRewardedWhenLoaded = false;
+                        runOnUiThread(() -> displayLoadedRewardedAd());
+                    }
+                }
+
+                @Override
+                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                    mIsLoadingRewardedAd = false;
+                    mRewardedAd = null;
+                    Log.w(TAG, "Live rewarded ad failed to load: Code " + loadAdError.getCode() + " (" + loadAdError.getMessage() + ")");
+
+                    if (mShowRewardedWhenLoaded) {
+                        mShowRewardedWhenLoaded = false;
+                        notifyRewardedAdFailed();
+                    }
+
+                    // Retry preloading after 15 seconds if idle
+                    mHandler.postDelayed(() -> {
+                        if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+                            loadRewardedAd();
+                        }
+                    }, 15000);
+                }
+            }
+        );
+    }
+
+    private void displayLoadedRewardedAd() {
+        if (mRewardedAd == null) {
+            notifyRewardedAdFailed();
+            return;
+        }
+
+        mUserEarnedReward = false;
+        mRewardedAd.show(MainActivity.this, new OnUserEarnedRewardListener() {
+            @Override
+            public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
+                int rewardAmount = rewardItem.getAmount();
+                String rewardType = rewardItem.getType();
+                Log.d(TAG, "User earned reward: " + rewardAmount + " " + rewardType);
+                mUserEarnedReward = true;
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void preloadRewardedAd() {
+        runOnUiThread(() -> {
+            if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+                Log.d(TAG, "Rewarded preload requested by game bridge");
+                loadRewardedAd();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void preloadRewarded() {
+        preloadRewardedAd();
+    }
+
+    @JavascriptInterface
+    public void showRewardedAd() {
+        runOnUiThread(() -> {
+            Log.d(TAG, "Displaying Rewarded Ad requested by game");
+
+            if (mRewardedAd != null) {
+                Log.d(TAG, "Displaying ready Rewarded Ad");
+                displayLoadedRewardedAd();
+            } else {
+                Log.d(TAG, "Rewarded Ad not ready yet; requesting load...");
+                mShowRewardedWhenLoaded = true;
+                loadRewardedAd();
+
+                // Allow up to 6 seconds for rewarded ad to finish loading before graceful fallback
+                mHandler.postDelayed(() -> {
+                    if (mShowRewardedWhenLoaded) {
+                        Log.w(TAG, "Rewarded Ad load timeout reached");
+                        mShowRewardedWhenLoaded = false;
+                        notifyRewardedAdFailed();
+                    }
+                }, 6000);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void showRewarded() {
+        showRewardedAd();
+    }
+
+    private void notifyRewardedAdDismissed(final boolean rewarded) {
+        runOnUiThread(() -> {
+            applyLightBackgrounds();
+            if (bridge != null && bridge.getWebView() != null) {
+                String js = rewarded
+                    ? "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(true); } " +
+                      "if (typeof window.onRewardedAdCompleted === 'function') { window.onRewardedAdCompleted(true); } " +
+                      "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: true } }));"
+                    : "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(false); } " +
+                      "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: false } }));";
+                bridge.getWebView().evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private void notifyRewardedAdFailed() {
+        runOnUiThread(() -> {
+            applyLightBackgrounds();
+            if (bridge != null && bridge.getWebView() != null) {
+                String js =
+                    "if (typeof window.onRewardedAdFailed === 'function') { window.onRewardedAdFailed(); } " +
+                    "window.dispatchEvent(new CustomEvent('rewardedAdFailed', { detail: { reason: 'unavailable' } }));";
                 bridge.getWebView().evaluateJavascript(js, null);
             }
         });

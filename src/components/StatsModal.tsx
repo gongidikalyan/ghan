@@ -41,6 +41,12 @@ export const StatsModal: React.FC<StatsModalProps> = ({
     { key: 'choice_hazard', label: 'Doors & Hazards', icon: '🚪' },
     { key: 'wire_switch', label: 'Wires & Switches', icon: '💣' },
     { key: 'code_puzzle', label: 'Code & Logic', icon: '🔐' },
+    { key: 'hold_release', label: 'Hold & Release', icon: '🏹' },
+    { key: 'dial_rotate', label: 'Dial & Rotate', icon: '🧭' },
+    { key: 'pattern_grid', label: 'Pattern Grid', icon: '🚨' },
+    { key: 'slider_match', label: 'Precision Slider', icon: '🎚️' },
+    { key: 'word_reflex', label: 'Word Reflex', icon: '🔤' },
+    { key: 'dual_reflex', label: 'Dual Reflex', icon: '⚖️' },
   ];
 
   return (

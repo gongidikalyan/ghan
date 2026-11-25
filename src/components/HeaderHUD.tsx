@@ -6,6 +6,8 @@ import { getDifficultyInfo } from '../utils/difficulty';
 interface HeaderHUDProps {
   score: number;
   combo: number;
+  lives: number;
+  maxLives?: number;
   timeRemainingPercent: number; // 0 to 100
   isInterim: boolean;
   totalTimeMs: number;
@@ -15,6 +17,8 @@ interface HeaderHUDProps {
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   score,
   combo,
+  lives,
+  maxLives = 3,
   timeRemainingPercent,
   isInterim,
   totalTimeMs,
@@ -28,14 +32,28 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
     <div className="w-full shrink-0 px-4 pt-3 pb-2 z-20 flex flex-col gap-2">
       {/* Top row: Life status, Dynamic Difficulty Badge & Score ticker */}
       <div className="flex items-center justify-between">
-        {/* Left: Life Counter */}
-        <div className="flex items-center gap-1.5 font-bold tracking-tight text-sm">
-          <Heart className="w-5 h-5 fill-rose-500 text-rose-500 animate-pulse" />
-          <span className={`font-display uppercase tracking-wider text-xs ${
-            isLight ? 'text-rose-600' : 'text-rose-400'
-          }`}>
-            1 Life
-          </span>
+        {/* Left: Lives Counter (3 Hearts) */}
+        <div
+          className="flex items-center gap-1"
+          aria-label={`${lives} of ${maxLives} lives remaining`}
+          title={`${lives} of ${maxLives} lives remaining`}
+        >
+          {Array.from({ length: maxLives }).map((_, idx) => {
+            const isAlive = idx < lives;
+            const isLastLife = lives === 1 && isAlive;
+            return (
+              <Heart
+                key={idx}
+                className={`w-5 h-5 transition-all duration-200 ${
+                  isAlive
+                    ? `fill-rose-500 text-rose-500 ${isLastLife ? 'animate-pulse scale-110' : ''}`
+                    : isLight
+                    ? 'text-slate-300 scale-90 opacity-60'
+                    : 'text-slate-700 scale-90 opacity-60'
+                }`}
+              />
+            );
+          })}
         </div>
 
         {/* Center: Dynamic Difficulty & Speed Badge */}
@@ -76,20 +94,34 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         </div>
       </div>
 
-      {/* Challenge countdown timer bar */}
-      <div className={`w-full h-2 rounded-full overflow-hidden ${
-        isLight ? 'bg-slate-200' : 'bg-slate-800/80'
-      }`}>
-        <div
-          className={`h-full rounded-full ${
-            isUrgent 
-              ? 'bg-rose-500 shadow-sm shadow-rose-500/50' 
-              : isLight 
-              ? 'bg-emerald-500' 
-              : 'bg-emerald-400'
+      {/* Challenge countdown timer bar + live seconds readout */}
+      <div className="w-full flex items-center gap-2">
+        <div className={`flex-1 h-2 rounded-full overflow-hidden ${
+          isLight ? 'bg-slate-200' : 'bg-slate-800/80'
+        }`}>
+          <div
+            className={`h-full rounded-full ${
+              isUrgent 
+                ? 'bg-rose-500 shadow-sm shadow-rose-500/50' 
+                : isLight 
+                ? 'bg-emerald-500' 
+                : 'bg-emerald-400'
+            }`}
+            style={{ width: `${Math.max(0, Math.min(100, timeRemainingPercent))}%` }}
+          />
+        </div>
+        <span
+          className={`text-[11px] font-bold font-mono-numbers tabular-nums w-9 text-right shrink-0 ${
+            isUrgent
+              ? 'text-rose-500'
+              : isLight
+              ? 'text-slate-600'
+              : 'text-slate-300'
           }`}
-          style={{ width: `${Math.max(0, Math.min(100, timeRemainingPercent))}%` }}
-        />
+          aria-label={`${Math.max(0, (timeRemainingPercent / 100) * (totalTimeMs / 1000)).toFixed(1)} seconds remaining`}
+        >
+          {Math.max(0, (timeRemainingPercent / 100) * (totalTimeMs / 1000)).toFixed(1)}s
+        </span>
       </div>
     </div>
   );

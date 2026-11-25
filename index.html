@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Speed n Tension</title>
-    <meta name="description" content="Speed n Tension: High-octane reaction and micro-challenge survival. One mistake ends your run. How long can you survive the tension?" />
+    <meta name="description" content="Speed n Tension: High-octane reaction and micro-challenge survival. You get 3 lives per run — how long can you survive the tension?" />
     <meta property="og:title" content="Speed n Tension" />
-    <meta property="og:description" content="Speed n Tension: High-octane reaction and micro-challenge survival. One mistake ends your run. How long can you survive the tension?" />
+    <meta property="og:description" content="Speed n Tension: High-octane reaction and micro-challenge survival. You get 3 lives per run — how long can you survive the tension?" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -41,23 +41,48 @@
         } catch (e) {}
       })();
     </script>
-    <!-- Google AdMob / AdSense for Games H5 Connector -->
-    <script async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5776267944392683"
-      crossorigin="anonymous"
-      data-adbreak-test="on"
-      data-ad-channel="speed_tension_app"
-      data-ad-frequency-hint="30s">
-    </script>
+    <!-- Google AdMob / AdSense for Games H5 Connector (Deferred until DOM body is mounted; guarded against sandboxed iframes) -->
     <script>
-      window.adsbygoogle = window.adsbygoogle || [];
-      window.adBreak = window.adConfig = function(o) { adsbygoogle.push(o); };
-      try {
-        window.adConfig({
-          preloadAdBreaks: 'on',
-          sound: 'on',
-        });
-      } catch (e) {}
+      (function() {
+        function initH5AdSense() {
+          if (!document.body) return;
+          var isEmbeddedIframe = false;
+          try {
+            isEmbeddedIframe = window.self !== window.top;
+          } catch (e) {
+            isEmbeddedIframe = true;
+          }
+          // Skip H5 AdSense preloading inside sandboxed preview iframes where slotcar_library fails on restricted document access
+          if (isEmbeddedIframe) return;
+
+          window.adsbygoogle = window.adsbygoogle || [];
+          window.adBreak = window.adConfig = function(o) { window.adsbygoogle.push(o); };
+
+          var script = document.createElement('script');
+          script.async = true;
+          script.crossOrigin = 'anonymous';
+          script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5776267944392683';
+          script.setAttribute('data-ad-channel', 'speed_tension_app');
+          script.setAttribute('data-ad-frequency-hint', '30s');
+          script.onload = function() {
+            try {
+              if (document.body && typeof window.adConfig === 'function') {
+                window.adConfig({
+                  preloadAdBreaks: 'on',
+                  sound: 'on',
+                });
+              }
+            } catch (e) {}
+          };
+          document.head.appendChild(script);
+        }
+
+        if (document.readyState === 'complete') {
+          initH5AdSense();
+        } else {
+          window.addEventListener('load', initH5AdSense, { once: true });
+        }
+      })();
     </script>
     <style>
       html, body, #root {

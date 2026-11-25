@@ -87,7 +87,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <p className={`text-sm font-semibold tracking-wide uppercase mb-8 ${
           isLight ? 'text-slate-500' : 'text-slate-400'
         }`}>
-          HIGH SPEED. HIGH TENSION. ONE LIFE.
+          HIGH SPEED. HIGH TENSION. 3 LIVES.
         </p>
 
         {/* Personal Best Display */}

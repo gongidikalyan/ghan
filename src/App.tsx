@@ -1,10 +1,11 @@
 /**
- * ONE LIFE: Fast-paced mobile reaction & attention game.
- * One life per run. One mistake ends the game.
+ * SPEED N TENSION: Fast-paced mobile reaction & attention game.
+ * 3 lives per run. Survive as many micro-challenges as you can.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Challenge, ChallengeType, ColorMode, GameScreen, GameSettings, UserStats } from './types/game';
+import { Heart, ShieldCheck } from 'lucide-react';
+import { Challenge, ChallengeType, GameScreen, GameSettings, UserStats } from './types/game';
 import { soundManager } from './utils/audio';
 import { hapticManager } from './utils/haptics';
 import {
@@ -33,20 +34,40 @@ import { FloatingTargetChallenge } from './components/challenges/FloatingTargetC
 import { DoorHazardChoiceChallenge } from './components/challenges/DoorHazardChoiceChallenge';
 import { WireSwitchChallenge } from './components/challenges/WireSwitchChallenge';
 import { CodePuzzleChallenge } from './components/challenges/CodePuzzleChallenge';
+import { HoldReleaseChallenge } from './components/challenges/HoldReleaseChallenge';
+import { DialRotateChallenge } from './components/challenges/DialRotateChallenge';
+import { PatternGridChallenge } from './components/challenges/PatternGridChallenge';
+import { SliderMatchChallenge } from './components/challenges/SliderMatchChallenge';
+import { WordReflexChallenge } from './components/challenges/WordReflexChallenge';
+import { DualReflexChallenge } from './components/challenges/DualReflexChallenge';
 import { HomeScreen } from './components/HomeScreen';
 import { CountdownScreen } from './components/CountdownScreen';
 import { GameOverScreen } from './components/GameOverScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { RulesModal } from './components/RulesModal';
+import { ContinueChoiceModal } from './components/ContinueChoiceModal';
 import { adManager } from './utils/adManager';
-import { showPlatformAd, preloadPlatformAd, forceRepaint } from './config/admob';
+import {
+  showPlatformAd,
+  preloadPlatformAd,
+  showRewardedAd,
+  preloadRewardedAd,
+  forceRepaint,
+} from './config/admob';
+
+const MAX_LIVES = 3;
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
   const [score, setScore] = useState<number>(0);
   const [combo, setCombo] = useState<number>(0);
   const [maxRunCombo, setMaxRunCombo] = useState<number>(0);
+  const [lives, setLives] = useState<number>(MAX_LIVES);
+  const [lifeStatusBanner, setLifeStatusBanner] = useState<{ savedByAd: boolean; remaining: number } | null>(null);
+  const [pendingMistake, setPendingMistake] = useState<{ reason: string } | null>(null);
+  const [isRewardedAdLoading, setIsRewardedAdLoading] = useState<boolean>(false);
+  const [rewardedAdError, setRewardedAdError] = useState<string | null>(null);
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isInterim, setIsInterim] = useState<boolean>(false);
@@ -84,12 +105,20 @@ export default function App() {
     choice_hazard: 0,
     wire_switch: 0,
     code_puzzle: 0,
+    hold_release: 0,
+    dial_rotate: 0,
+    pattern_grid: 0,
+    slider_match: 0,
+    word_reflex: 0,
+    dual_reflex: 0,
   });
 
   const timerRef = useRef<number | null>(null);
   const lastTickTimeRef = useRef<number>(performance.now());
   const isResolvedRef = useRef<boolean>(false);
+  const livesRef = useRef<number>(MAX_LIVES);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const inputUnlockTimeoutRef = useRef<number | null>(null);
   const [inputLocked, setInputLocked] = useState<boolean>(false);
   const runStartTimeRef = useRef<number>(performance.now());
 
@@ -150,15 +179,13 @@ export default function App() {
     };
   }, []);
 
-  // Handle wrong answer / game over
-  const triggerGameOver = useCallback((reason: string) => {
+  // Handle wrong answer or timeout: pause cleanly BEFORE deducting a life so the player
+  // can optionally watch a rewarded ad to protect remaining lives, use a life, or end the run.
+  const handleMistake = useCallback((reason: string) => {
     if (isResolvedRef.current || isInterim) return;
     isResolvedRef.current = true;
     setInputLocked(true);
-
-    const runDurationMs = performance.now() - runStartTimeRef.current;
-    adManager.recordRunCompleted(score, runDurationMs);
-    preloadPlatformAd();
+    setIsInterim(true);
 
     if (timerRef.current) {
       cancelAnimationFrame(timerRef.current);
@@ -168,12 +195,140 @@ export default function App() {
       clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = null;
     }
+    if (inputUnlockTimeoutRef.current) {
+      clearTimeout(inputUnlockTimeoutRef.current);
+      inputUnlockTimeoutRef.current = null;
+    }
 
-    soundManager.playWrong();
-    hapticManager.failBuzz();
+    soundManager.playLifeLost();
+    hapticManager.lifeLostBuzz();
+    preloadRewardedAd();
 
     setScreenShake(true);
-    setGameOverReason(reason);
+    setRewardedAdError(null);
+    setPendingMistake({ reason });
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setScreenShake(false);
+    }, 260);
+  }, [isInterim]);
+
+  // Resume the exact same game session after protecting a life via ad or using 1 life
+  const resumeSameSession = useCallback((savedByAd: boolean, remainingLives: number) => {
+    const proceed = () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      if (inputUnlockTimeoutRef.current) {
+        clearTimeout(inputUnlockTimeoutRef.current);
+        inputUnlockTimeoutRef.current = null;
+      }
+
+      setPendingMistake(null);
+      setRewardedAdError(null);
+      setCombo(0);
+      setLifeStatusBanner({ savedByAd, remaining: remainingLives });
+
+      const nextChal = generateNextChallenge(score, currentChallenge?.type);
+      setCurrentChallenge(nextChal);
+      setTimeRemaining(nextChal.durationMs);
+      setIsInterim(false);
+      lastTickTimeRef.current = performance.now();
+
+      inputUnlockTimeoutRef.current = window.setTimeout(() => {
+        isResolvedRef.current = false;
+        setInputLocked(false);
+      }, 120);
+
+      transitionTimeoutRef.current = window.setTimeout(() => {
+        setLifeStatusBanner(null);
+      }, 1100);
+    };
+
+    // Never start the next challenge timer while a native ad activity is still dismissing
+    if (document.hidden || document.visibilityState === 'hidden') {
+      const onVisible = () => {
+        if (!document.hidden && document.visibilityState === 'visible') {
+          document.removeEventListener('visibilitychange', onVisible);
+          window.removeEventListener('focus', onVisible);
+          proceed();
+        }
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('focus', onVisible);
+      return;
+    }
+
+    proceed();
+  }, [score, currentChallenge]);
+
+  // Optional rewarded ad flow: preserves current lives untouched and continues the same session
+  const handleWatchAdProtectLife = async () => {
+    if (isRewardedAdLoading || !pendingMistake) return;
+    setIsRewardedAdLoading(true);
+    setRewardedAdError(null);
+
+    try {
+      const result = await showRewardedAd();
+      forceRepaint();
+      soundManager.init();
+
+      if (result.rewarded) {
+        soundManager.playLifeSaved();
+        hapticManager.successCombo();
+        preloadRewardedAd();
+        resumeSameSession(true, livesRef.current);
+      } else {
+        setRewardedAdError(
+          result.unavailable
+            ? 'Ad is unavailable right now. You can retry, use a life, or end the run.'
+            : 'Watch the full ad to protect your remaining lives.'
+        );
+      }
+    } catch {
+      setRewardedAdError('Ad could not load right now. You can retry, use a life, or end the run.');
+    } finally {
+      setIsRewardedAdLoading(false);
+    }
+  };
+
+  // Optional non-ad continue flow: consumes 1 life and continues the same session
+  const handleUseLifeToContinue = () => {
+    if (isRewardedAdLoading || !pendingMistake || livesRef.current <= 1) return;
+    const remainingLives = Math.max(1, livesRef.current - 1);
+    livesRef.current = remainingLives;
+    setLives(remainingLives);
+
+    soundManager.playTap();
+    hapticManager.lightTap();
+    resumeSameSession(false, remainingLives);
+  };
+
+  // End the current run from the mistake prompt (either view Game Over or Try Again freshly)
+  const finalizeRunFromMistake = async (startFreshImmediately: boolean) => {
+    if (isRewardedAdLoading) return;
+    const reason = pendingMistake?.reason || 'Run ended.';
+
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    if (inputUnlockTimeoutRef.current) {
+      clearTimeout(inputUnlockTimeoutRef.current);
+      inputUnlockTimeoutRef.current = null;
+    }
+
+    livesRef.current = 0;
+    setLives(0);
+    setPendingMistake(null);
+    setRewardedAdError(null);
+    setLifeStatusBanner(null);
+    setScreenShake(false);
+
+    const runDurationMs = performance.now() - runStartTimeRef.current;
+    adManager.recordRunCompleted(score, runDurationMs);
+    preloadPlatformAd();
 
     const { isNewBest: newBestAchieved, updatedStats } = updateStatsAfterRun(
       score,
@@ -183,12 +338,29 @@ export default function App() {
 
     setIsNewBest(newBestAchieved);
     setStats(updatedStats);
+    setGameOverReason(reason);
 
-    setTimeout(() => {
-      setScreenShake(false);
-      setScreen('GAME_OVER');
-    }, 400);
-  }, [score, maxRunCombo, isInterim]);
+    if (startFreshImmediately) {
+      if (adManager.shouldShowInterstitial(score)) {
+        adManager.recordAdShown();
+        setIsPlatformAdLoading(true);
+        try {
+          await showPlatformAd();
+        } catch (err) {
+          console.warn('Ad error during retry:', err);
+        } finally {
+          setIsPlatformAdLoading(false);
+          forceRepaint();
+        }
+      }
+      startNewRun();
+      return;
+    }
+
+    soundManager.playWrong();
+    hapticManager.failBuzz();
+    setScreen('GAME_OVER');
+  };
 
   // Handle correct answer
   const handleCorrect = useCallback(() => {
@@ -229,6 +401,10 @@ export default function App() {
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
     }
+    if (inputUnlockTimeoutRef.current) {
+      clearTimeout(inputUnlockTimeoutRef.current);
+      inputUnlockTimeoutRef.current = null;
+    }
 
     transitionTimeoutRef.current = window.setTimeout(() => {
       setInterimSuccess(false);
@@ -239,7 +415,7 @@ export default function App() {
       lastTickTimeRef.current = performance.now();
 
       // Generous grace period so previous touch release never triggers new challenge buttons
-      window.setTimeout(() => {
+      inputUnlockTimeoutRef.current = window.setTimeout(() => {
         isResolvedRef.current = false;
         setInputLocked(false);
       }, 90);
@@ -259,6 +435,7 @@ export default function App() {
     lastTickTimeRef.current = performance.now();
 
     const tick = () => {
+      if (isResolvedRef.current) return;
       const now = performance.now();
       const delta = now - lastTickTimeRef.current;
       lastTickTimeRef.current = now;
@@ -273,7 +450,7 @@ export default function App() {
       setTimeRemaining((prev) => {
         const next = prev - delta;
         if (next <= 0) {
-          triggerGameOver("Time's up!");
+          handleMistake("Time's up!");
           return 0;
         }
         return next;
@@ -290,7 +467,7 @@ export default function App() {
         timerRef.current = null;
       }
     };
-  }, [screen, isInterim, currentChallenge, triggerGameOver]);
+  }, [screen, isInterim, currentChallenge, handleMistake]);
 
   // Start new run
   const startNewRun = () => {
@@ -314,7 +491,19 @@ export default function App() {
       clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = null;
     }
+    if (inputUnlockTimeoutRef.current) {
+      clearTimeout(inputUnlockTimeoutRef.current);
+      inputUnlockTimeoutRef.current = null;
+    }
     isResolvedRef.current = false;
+    livesRef.current = MAX_LIVES;
+    setLives(MAX_LIVES);
+    setLifeStatusBanner(null);
+    setPendingMistake(null);
+    setRewardedAdError(null);
+    setIsRewardedAdLoading(false);
+    setScreenShake(false);
+    setInterimSuccess(false);
     setInputLocked(false);
     setIsInterim(false);
     setScore(0);
@@ -322,6 +511,7 @@ export default function App() {
     setMaxRunCombo(0);
     setIsNewBest(false);
     setGameOverReason('');
+    preloadRewardedAd();
     runChallengesCountRef.current = {
       color_tap: 0,
       dont_touch: 0,
@@ -340,6 +530,12 @@ export default function App() {
       choice_hazard: 0,
       wire_switch: 0,
       code_puzzle: 0,
+      hold_release: 0,
+      dial_rotate: 0,
+      pattern_grid: 0,
+      slider_match: 0,
+      word_reflex: 0,
+      dual_reflex: 0,
     };
 
     // Pre-generate the first challenge during countdown so it's loaded in memory with 0ms delay
@@ -500,16 +696,48 @@ export default function App() {
 
         {/* Screen 3: PLAYING */}
         {screen === 'PLAYING' && currentChallenge && (
-          <div className="w-full h-full flex flex-col justify-between py-2">
+          <div className="relative w-full h-full flex flex-col justify-between py-2">
             {/* Top HUD */}
             <HeaderHUD
               score={score}
               combo={combo}
+              lives={lives}
+              maxLives={MAX_LIVES}
               timeRemainingPercent={timePercent}
               isInterim={isInterim}
               totalTimeMs={currentChallenge.durationMs}
               colorMode={settings.colorMode}
             />
+
+            {/* Non-blocking Life Protected / Used Toast */}
+            {lifeStatusBanner && (
+              <div className="pointer-events-none absolute top-16 left-0 right-0 z-30 flex justify-center px-4 animate-fade-in">
+                <div
+                  className={`px-4 py-2 rounded-xl border shadow-md flex items-center gap-2 text-xs font-bold ${
+                    lifeStatusBanner.savedByAd
+                      ? isLight
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
+                      : isLight
+                      ? 'bg-white border-rose-200 text-rose-700'
+                      : 'bg-slate-900 border-rose-800 text-rose-300'
+                  }`}
+                >
+                  {lifeStatusBanner.savedByAd ? (
+                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Heart className="w-4 h-4 fill-rose-500 text-rose-500 shrink-0" />
+                  )}
+                  <span>
+                    {lifeStatusBanner.savedByAd
+                      ? `Life Protected · ${lifeStatusBanner.remaining} of ${MAX_LIVES} Lives Intact`
+                      : `Continued · ${lifeStatusBanner.remaining} of ${MAX_LIVES} ${
+                          lifeStatusBanner.remaining === 1 ? 'Life' : 'Lives'
+                        } Left`}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Active Challenge Screen */}
             <div className={`flex-1 w-full flex flex-col justify-center items-center ${(isInterim || inputLocked) ? 'pointer-events-none' : ''}`}>
@@ -520,7 +748,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -531,7 +759,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -542,7 +770,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -553,7 +781,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -564,7 +792,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -575,7 +803,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -586,7 +814,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -597,7 +825,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -608,7 +836,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -619,7 +847,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -630,7 +858,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -642,7 +870,7 @@ export default function App() {
                   colorMode={settings.colorMode}
                   durationMs={currentChallenge.durationMs}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -653,7 +881,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -664,7 +892,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -675,7 +903,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -686,7 +914,7 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
                 />
               )}
 
@@ -697,7 +925,73 @@ export default function App() {
                   instruction={currentChallenge.instruction}
                   colorMode={settings.colorMode}
                   onCorrect={handleCorrect}
-                  onWrong={triggerGameOver}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'hold_release' && (
+                <HoldReleaseChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'dial_rotate' && (
+                <DialRotateChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'pattern_grid' && (
+                <PatternGridChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'slider_match' && (
+                <SliderMatchChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'word_reflex' && (
+                <WordReflexChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
+                />
+              )}
+
+              {currentChallenge.type === 'dual_reflex' && (
+                <DualReflexChallenge
+                  key={currentChallenge.id}
+                  payload={currentChallenge.payload.data as any}
+                  instruction={currentChallenge.instruction}
+                  colorMode={settings.colorMode}
+                  onCorrect={handleCorrect}
+                  onWrong={handleMistake}
                 />
               )}
             </div>
@@ -739,6 +1033,21 @@ export default function App() {
         isOpen={isRulesOpen}
         colorMode={settings.colorMode}
         onClose={() => setIsRulesOpen(false)}
+      />
+
+      <ContinueChoiceModal
+        isOpen={screen === 'PLAYING' && Boolean(pendingMistake)}
+        reason={pendingMistake?.reason || ''}
+        lives={lives}
+        maxLives={MAX_LIVES}
+        score={score}
+        colorMode={settings.colorMode}
+        isAdLoading={isRewardedAdLoading}
+        adError={rewardedAdError}
+        onWatchAdProtectLife={handleWatchAdProtectLife}
+        onUseLifeContinue={handleUseLifeToContinue}
+        onTryAgain={() => finalizeRunFromMistake(true)}
+        onEndRun={() => finalizeRunFromMistake(false)}
       />
 
       {/* Seamless overlay while native platform ad bridges */}

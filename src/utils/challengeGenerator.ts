@@ -10,6 +10,7 @@ import {
   ShapeItem,
 } from '../types/game';
 import { getDynamicDuration, getSpeedMultiplier } from './difficulty';
+import { NEW_30_MECHANICS } from './newMechanicsGenerator';
 
 // 12 High-Contrast Curated Colors
 const COLOR_PALETTE = [
@@ -382,14 +383,14 @@ function generateMemoryPosition(score: number, forcedGridSize?: number): Challen
 
   const icons = ['🔴', '💎', '⭐', '⚡', '🔥', '👑', '🎯'];
   const targetIcon = icons[Math.floor(Math.random() * icons.length)];
-  const answerTimeMs = getDynamicDuration(5150, score, 3000);
+  const durationMs = getDynamicDuration(10000, score, 10000);
 
   return {
     id,
     type: 'memory_position',
     title: 'REMEMBER POSITION',
     instruction: `TAP WHERE ${targetIcon} WAS`,
-    durationMs: flashDurationMs + answerTimeMs,
+    durationMs,
     payload: {
       type: 'memory_position',
       data: {
@@ -1231,7 +1232,7 @@ function generateCodePuzzle(score: number, forcedSubType?: string): Challenge {
 }
 
 export interface MechanicDefinition {
-  index: number; // 1 to 180
+  index: number; // 1 to 210
   id: string;
   name: string;
   icon: string;
@@ -1424,11 +1425,14 @@ export const MECHANICS_CATALOG: MechanicDefinition[] = [
   { index: 178, id: 'mech_speed_typo_hunter', name: 'TENSI0N Typo Spot', icon: '🔤', category: 'Observation', summary: 'Spot zero disguised as letter O in title', type: 'find_odd', generator: (s) => generateFindOdd(s, 1) },
   { index: 179, id: 'mech_siren_trap', name: 'Safe vs Danger Trap', icon: '🚨', category: 'Hazard Choice', summary: 'Read word SAFE despite red warning glow', type: 'choice_hazard', generator: (s) => generateChoiceHazard(s, 'which_door') },
   { index: 180, id: 'mech_nuclear_abort', name: 'Nuclear Abort Keycode', icon: '☢️', category: 'Order & Speed', summary: 'Input 3-symbol abort sequence before ignition', type: 'code_puzzle', generator: (s) => generateCodePuzzle(s, 'unlock_code') },
+
+  // 181 - 210: 30 Brand-New Interactive Mechanisms across 6 New Engines
+  ...NEW_30_MECHANICS,
 ];
 
 /**
- * MechanicsDeckManager: Infinite Shuffled Bag of 180 Unique Mechanics.
- * Guarantees that ALL 180 mechanics appear sequentially without premature repetition.
+ * MechanicsDeckManager: Infinite Shuffled Bag of 210 Unique Mechanics.
+ * Guarantees that ALL 210 mechanics appear sequentially without premature repetition.
  * Tracks discovered mechanics across game sessions in localStorage.
  */
 class MechanicsDeckManager {
@@ -1467,39 +1471,78 @@ class MechanicsDeckManager {
   }
 
   private refillDeck(): void {
-    // Fill deck with all 180 indices (0 to MECHANICS_CATALOG.length - 1)
-    const all = Array.from({ length: MECHANICS_CATALOG.length }, (_, i) => i);
-    // Fisher-Yates Shuffle
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
+    const newSetIndices: number[] = [];
+    const restIndices: number[] = [];
+
+    for (let i = 0; i < MECHANICS_CATALOG.length; i++) {
+      const mech = MECHANICS_CATALOG[i];
+      // Prioritize undiscovered newly-added mechanics (#181-#210) so players experience them right away
+      if (mech.index >= 181 && !this.discoveredIndices.has(mech.index)) {
+        newSetIndices.push(i);
+      } else {
+        restIndices.push(i);
+      }
     }
-    // Prevent immediate repeat on reshuffle boundary
-    if (all[0] === this.lastMechanicIndex && all.length > 1) {
-      const swapIdx = Math.floor(Math.random() * (all.length - 1)) + 1;
-      [all[0], all[swapIdx]] = [all[swapIdx], all[0]];
+
+    const fisherYates = (arr: number[]) => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    };
+
+    fisherYates(newSetIndices);
+    fisherYates(restIndices);
+
+    // Since drawNextMechanic uses pop() from the end, place prioritized new mechanics near the top
+    // interleaved with classic mechanics for balanced variety
+    const deck: number[] = [];
+    if (newSetIndices.length > 0) {
+      const tailClassicCount = Math.min(restIndices.length, newSetIndices.length);
+      const baseClassic = restIndices.slice(0, restIndices.length - tailClassicCount);
+      const interleaveClassic = restIndices.slice(restIndices.length - tailClassicCount);
+
+      deck.push(...baseClassic);
+      const maxLen = Math.max(newSetIndices.length, interleaveClassic.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (i < interleaveClassic.length) deck.push(interleaveClassic[i]);
+        if (i < newSetIndices.length) deck.push(newSetIndices[i]);
+      }
+    } else {
+      deck.push(...restIndices);
     }
-    this.activeDeck = all;
+
+    // Prevent immediate repeat on reshuffle boundary (top of stack is last element)
+    const lastPos = deck.length - 1;
+    if (lastPos > 0 && deck[lastPos] === this.lastMechanicIndex) {
+      const swapIdx = Math.floor(Math.random() * lastPos);
+      [deck[lastPos], deck[swapIdx]] = [deck[swapIdx], deck[lastPos]];
+    }
+
+    this.activeDeck = deck;
   }
 
   /**
-   * Draws the next mechanic from the shuffled 180-card bag.
+   * Draws the next mechanic from the shuffled 210-card bag.
    */
   public drawNextMechanic(lastType?: ChallengeType): MechanicDefinition {
     if (this.activeDeck.length === 0) {
       this.refillDeck();
     }
 
-    // If top card happens to match lastType, swap with next card if available to avoid same engine back-to-back
+    // Avoid same engine type back-to-back by searching down from top of stack
     if (lastType && this.activeDeck.length > 1) {
-      const topIdx = this.activeDeck[this.activeDeck.length - 1];
-      if (MECHANICS_CATALOG[topIdx].type === lastType) {
-        // Swap top with second-to-top
-        const swapIdx = this.activeDeck.length - 2;
-        [this.activeDeck[this.activeDeck.length - 1], this.activeDeck[swapIdx]] = [
-          this.activeDeck[swapIdx],
-          this.activeDeck[this.activeDeck.length - 1],
-        ];
+      const topPos = this.activeDeck.length - 1;
+      if (MECHANICS_CATALOG[this.activeDeck[topPos]].type === lastType) {
+        for (let swapPos = topPos - 1; swapPos >= Math.max(0, topPos - 10); swapPos--) {
+          if (MECHANICS_CATALOG[this.activeDeck[swapPos]].type !== lastType) {
+            [this.activeDeck[topPos], this.activeDeck[swapPos]] = [
+              this.activeDeck[swapPos],
+              this.activeDeck[topPos],
+            ];
+            break;
+          }
+        }
       }
     }
 

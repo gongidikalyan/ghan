@@ -31,18 +31,16 @@ export function getSpeedMultiplier(score: number): number {
 }
 
 /**
- * Calculates the dynamic challenge time limit in milliseconds.
- * Applies the speed multiplier against the challenge's base time (6000ms),
- * while respecting a safety floor of 3500ms to ensure the player is never unfairly timed out.
+ * Fixed 10-second countdown timer applied to every challenge.
  */
+export const CHALLENGE_TIMER_MS = 10000;
+
 export function getDynamicDuration(
-  baseDurationMs: number = 6000,
-  score: number,
-  absoluteFloorMs: number = 3500
+  _baseDurationMs: number = CHALLENGE_TIMER_MS,
+  _score: number = 0,
+  _absoluteFloorMs: number = CHALLENGE_TIMER_MS
 ): number {
-  const multiplier = getSpeedMultiplier(score);
-  const scaledMs = Math.round(baseDurationMs / multiplier);
-  return Math.max(absoluteFloorMs, scaledMs);
+  return CHALLENGE_TIMER_MS;
 }
 
 /**

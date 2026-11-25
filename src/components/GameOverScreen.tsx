@@ -78,7 +78,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
         <p className={`text-xs font-semibold px-4 tracking-wide ${
           isLight ? 'text-rose-600' : 'text-rose-400'
         }`}>
-          {reason || 'One mistake ended your run.'}
+          {reason || 'All 3 lives lost.'}
         </p>
       </div>
 

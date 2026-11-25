@@ -61,6 +61,18 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
       desc: 'Tap the Color (Stroop), Find the Odd One, Fast Math, Rock Paper Scissors, and Shape Match!',
       icon: '🎨',
     },
+    {
+      title: 'HOLD, DIAL & PRECISION SLIDERS',
+      badge: '08',
+      desc: 'Slingshot Pull, Breath Hold, Compass Align, Safe Cracker, Radio Tuner, and Camera Lens Focus!',
+      icon: '🧭',
+    },
+    {
+      title: 'PATTERN GRIDS, WORDS & DUELS',
+      badge: '09',
+      desc: 'Lights Out, Pattern Copy, Antonym Clash, Rhyming Spark, Heavy Scale, Math Duel, and Twin Check!',
+      icon: '⚖️',
+    },
   ];
 
   return (
@@ -112,7 +124,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>180 Mechanics ({discoveredCount}/{catalog.length})</span>
+            <span>{catalog.length} Mechanics ({discoveredCount}/{catalog.length})</span>
           </button>
           <button
             type="button"
@@ -245,8 +257,8 @@ export const RulesModal: React.FC<RulesModalProps> = ({ colorMode, isOpen, onClo
                 isLight ? 'text-rose-800' : 'text-rose-300'
               }`}>
                 <strong className={isLight ? 'text-rose-950 font-bold' : 'text-white font-bold'}>
-                  ONE LIFE RULE:
-                </strong> Exactly 1 life. One wrong tap or expired timer ends the run instantly!
+                  3 LIVES &amp; LIFE PROTECTION:
+                </strong> You start every run with 3 lives. On any mistake, you can optionally watch a rewarded ad to keep your remaining lives intact and continue the same run, or spend 1 life and keep going!
               </p>
             </div>
 

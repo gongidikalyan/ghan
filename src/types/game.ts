@@ -16,7 +16,14 @@ export type ChallengeType =
   | 'floating_target'
   | 'choice_hazard'
   | 'wire_switch'
-  | 'code_puzzle';
+  | 'code_puzzle'
+  // 30 New Interactive Mechanism Engines
+  | 'hold_release'
+  | 'dial_rotate'
+  | 'pattern_grid'
+  | 'slider_match'
+  | 'word_reflex'
+  | 'dual_reflex';
 
 export type GameScreen = 
   | 'SPLASH' 
@@ -234,6 +241,95 @@ export interface CodePuzzlePayload {
   options: { id: string; label: string; isCorrect: boolean }[];
 }
 
+// 7. Hold & Release Timing (Slingshot Pull, Breath Hold, Turbo Boost, Balloon Inflate, Sniper Breath)
+export interface HoldReleasePayload {
+  subType: string;
+  centerIcon: string;
+  actionLabel: string;
+  targetStartPercent: number;
+  targetWidthPercent: number;
+  fillDurationMs: number;
+  hint: string;
+}
+
+// 8. Dial Rotate Alignment (Compass North, Safe Dial Cracker, Satellite Dish, Clock Hands, Laser Mirror)
+export interface DialRotatePayload {
+  subType: string;
+  centerIcon: string;
+  stepsCount: 4 | 8;
+  initialStep: number;
+  targetStep: number;
+  stepLabels: string[];
+  targetLabel: string;
+  hint: string;
+}
+
+// 9. Pattern Grid Multi-Tap (Lights Out, Star Collector, Row Cleaner, Corner Lock, Symmetry Mirror)
+export interface PatternGridCell {
+  index: number;
+  icon: string;
+  isTarget: boolean;
+  isLit?: boolean;
+}
+
+export interface PatternGridPayload {
+  subType: string;
+  cells: PatternGridCell[];
+  previewIndices?: number[];
+  hint: string;
+}
+
+// 10. Slider Match Tuner (Radio Frequency, Reactor Temp, Volume Mixer, Zoom Focus, Water Level)
+export interface SliderMatchPayload {
+  subType: string;
+  centerIcon: string;
+  unit: string;
+  minVal: number;
+  maxVal: number;
+  initialVal: number;
+  targetMin: number;
+  targetMax: number;
+  targetLabel: string;
+  isFocusMode?: boolean;
+  confirmLabel: string;
+  hint: string;
+}
+
+// 11. Word Reflex (Antonym Clash, Rhyming Spark, First Letter Snap, Missing Letter, Category Outlier)
+export interface WordReflexOption {
+  id: string;
+  label: string;
+  icon?: string;
+  isCorrect: boolean;
+}
+
+export interface WordReflexPayload {
+  subType: string;
+  badge: string;
+  prompt: string;
+  promptSub?: string;
+  options: WordReflexOption[];
+  explanation: string;
+}
+
+// 12. Dual Reflex Comparison (Heavy Scale, Dot Crowd, Math Duel, Speed Clash, Twin Check)
+export interface DualSideData {
+  label: string;
+  icon?: string;
+  dots?: string[];
+  subLabel?: string;
+}
+
+export interface DualReflexPayload {
+  subType: string;
+  mode: 'pick_side' | 'same_diff';
+  left: DualSideData;
+  right: DualSideData;
+  correctAnswer: 'LEFT' | 'RIGHT' | 'SAME' | 'DIFFERENT';
+  explanation: string;
+  hint: string;
+}
+
 export type ChallengePayload = 
   | { type: 'color_tap'; data: ColorTapPayload }
   | { type: 'dont_touch'; data: DontTouchPayload }
@@ -251,7 +347,13 @@ export type ChallengePayload =
   | { type: 'floating_target'; data: FloatingTargetPayload }
   | { type: 'choice_hazard'; data: ChoiceHazardPayload }
   | { type: 'wire_switch'; data: WireSwitchPayload }
-  | { type: 'code_puzzle'; data: CodePuzzlePayload };
+  | { type: 'code_puzzle'; data: CodePuzzlePayload }
+  | { type: 'hold_release'; data: HoldReleasePayload }
+  | { type: 'dial_rotate'; data: DialRotatePayload }
+  | { type: 'pattern_grid'; data: PatternGridPayload }
+  | { type: 'slider_match'; data: SliderMatchPayload }
+  | { type: 'word_reflex'; data: WordReflexPayload }
+  | { type: 'dual_reflex'; data: DualReflexPayload };
 
 export interface Challenge extends BaseChallenge {
   payload: ChallengePayload;

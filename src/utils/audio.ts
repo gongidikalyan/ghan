@@ -164,6 +164,72 @@ export const soundManager = {
     }
   },
 
+  playLifeLost() {
+    if (!this.enabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Crisp descending double-tone warning distinct from final Game Over buzzer
+      [
+        { freq: 310, endFreq: 220, time: 0, dur: 0.1 },
+        { freq: 210, endFreq: 145, time: 0.09, dur: 0.13 },
+      ].forEach(({ freq, endFreq, time, dur }) => {
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + time);
+          osc.frequency.linearRampToValueAtTime(endFreq, now + time + dur);
+          gain.gain.setValueAtTime(0.3 * this.volume, now + time);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + time);
+          osc.stop(now + time + dur);
+        } catch {
+          // Ignore individual tone error
+        }
+      });
+    } catch {
+      // Ignore
+    }
+  },
+
+  playLifeSaved() {
+    if (!this.enabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Warm ascending protective chime (C5 -> E5 -> G5)
+      [
+        { freq: 523.25, time: 0, dur: 0.1 },
+        { freq: 659.25, time: 0.08, dur: 0.12 },
+        { freq: 783.99, time: 0.16, dur: 0.22 },
+      ].forEach(({ freq, time, dur }) => {
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + time);
+          gain.gain.setValueAtTime(0.24 * this.volume, now + time);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + time);
+          osc.stop(now + time + dur);
+        } catch {
+          // Ignore individual tone error
+        }
+      });
+    } catch {
+      // Ignore
+    }
+  },
+
   playCountdownTick() {
     if (!this.enabled) return;
     try {

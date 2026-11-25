@@ -28,6 +28,15 @@ export const hapticManager = {
     }
   },
 
+  lifeLostBuzz() {
+    if (!this.enabled || typeof window === 'undefined' || !navigator.vibrate) return;
+    try {
+      navigator.vibrate([90, 40, 90]);
+    } catch {
+      // Ignored
+    }
+  },
+
   failBuzz() {
     if (!this.enabled || typeof window === 'undefined' || !navigator.vibrate) return;
     try {
