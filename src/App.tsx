@@ -49,7 +49,6 @@ import { RulesModal } from './components/RulesModal';
 import { ContinueChoiceModal } from './components/ContinueChoiceModal';
 import { adManager } from './utils/adManager';
 import {
-  ADMOB_CONFIG,
   showPlatformAd,
   preloadPlatformAd,
   showRewardedAd,
@@ -58,7 +57,6 @@ import {
 } from './config/admob';
 
 const MAX_LIVES = 3;
-const MAX_REWARDED_ADS_PER_RUN = ADMOB_CONFIG.maxRewardedAdsPerRun;
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
@@ -68,7 +66,6 @@ export default function App() {
   const [lives, setLives] = useState<number>(MAX_LIVES);
   const [lifeStatusBanner, setLifeStatusBanner] = useState<{ savedByAd: boolean; remaining: number } | null>(null);
   const [pendingMistake, setPendingMistake] = useState<{ reason: string } | null>(null);
-  const [rewardedAdsUsed, setRewardedAdsUsed] = useState<number>(0);
   const [isRewardedAdLoading, setIsRewardedAdLoading] = useState<boolean>(false);
   const [rewardedAdError, setRewardedAdError] = useState<string | null>(null);
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null);
@@ -120,7 +117,6 @@ export default function App() {
   const lastTickTimeRef = useRef<number>(performance.now());
   const isResolvedRef = useRef<boolean>(false);
   const livesRef = useRef<number>(MAX_LIVES);
-  const rewardedAdsUsedRef = useRef<number>(0);
   const rewardedAdInFlightRef = useRef<boolean>(false);
   const transitionTimeoutRef = useRef<number | null>(null);
   const inputUnlockTimeoutRef = useRef<number | null>(null);
@@ -207,9 +203,7 @@ export default function App() {
 
     soundManager.playLifeLost();
     hapticManager.lifeLostBuzz();
-    if (rewardedAdsUsedRef.current < MAX_REWARDED_ADS_PER_RUN) {
-      preloadRewardedAd();
-    }
+    preloadRewardedAd();
 
     setScreenShake(true);
     setRewardedAdError(null);
@@ -256,14 +250,9 @@ export default function App() {
     }, 1100);
   }, [score, currentChallenge]);
 
-  // Optional rewarded ad flow: preserves current lives untouched and continues the same session
+  // Optional rewarded ad flow: preserves current lives untouched across all 3 lives
   const handleWatchAdProtectLife = async () => {
-    if (
-      rewardedAdInFlightRef.current ||
-      isRewardedAdLoading ||
-      !pendingMistake ||
-      rewardedAdsUsedRef.current >= MAX_REWARDED_ADS_PER_RUN
-    ) {
+    if (rewardedAdInFlightRef.current || isRewardedAdLoading || !pendingMistake) {
       return;
     }
     rewardedAdInFlightRef.current = true;
@@ -276,8 +265,6 @@ export default function App() {
       soundManager.init();
 
       if (result.rewarded) {
-        rewardedAdsUsedRef.current += 1;
-        setRewardedAdsUsed(rewardedAdsUsedRef.current);
         soundManager.playLifeSaved();
         hapticManager.successCombo();
         resumeSameSession(true, livesRef.current);
@@ -500,8 +487,6 @@ export default function App() {
     isResolvedRef.current = false;
     livesRef.current = MAX_LIVES;
     setLives(MAX_LIVES);
-    rewardedAdsUsedRef.current = 0;
-    setRewardedAdsUsed(0);
     setLifeStatusBanner(null);
     setPendingMistake(null);
     setRewardedAdError(null);
@@ -1044,8 +1029,6 @@ export default function App() {
         reason={pendingMistake?.reason || ''}
         lives={lives}
         maxLives={MAX_LIVES}
-        remainingRewardedAds={Math.max(0, MAX_REWARDED_ADS_PER_RUN - rewardedAdsUsed)}
-        maxRewardedAds={MAX_REWARDED_ADS_PER_RUN}
         score={score}
         colorMode={settings.colorMode}
         isAdLoading={isRewardedAdLoading}

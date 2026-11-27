@@ -9,7 +9,6 @@ export const ADMOB_CONFIG = {
   rewardedAdUnitId: import.meta.env.VITE_ADMOB_REWARDED_ID || 'ca-app-pub-5776267944392683/7428238224',
   publisherId: 'pub-5776267944392683',
   isAdsEnabled: true,
-  maxRewardedAdsPerRun: 1,
 } as const;
 
 /**
