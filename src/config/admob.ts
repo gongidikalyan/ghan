@@ -9,6 +9,7 @@ export const ADMOB_CONFIG = {
   rewardedAdUnitId: import.meta.env.VITE_ADMOB_REWARDED_ID || 'ca-app-pub-5776267944392683/7428238224',
   publisherId: 'pub-5776267944392683',
   isAdsEnabled: true,
+  maxRewardedAdsPerRun: 1,
 } as const;
 
 /**
@@ -70,11 +71,25 @@ export function preloadRewardedAd(): void {
   }
 }
 
+let activeInterstitialAdPromise: Promise<boolean> | null = null;
+let activeRewardedAdPromise: Promise<RewardedAdResult> | null = null;
+
 export async function showPlatformAd(): Promise<boolean> {
   if (!ADMOB_CONFIG.isAdsEnabled) {
     return false;
   }
 
+  if (activeInterstitialAdPromise) {
+    return activeInterstitialAdPromise;
+  }
+
+  activeInterstitialAdPromise = runShowPlatformAd().finally(() => {
+    activeInterstitialAdPromise = null;
+  });
+  return activeInterstitialAdPromise;
+}
+
+async function runShowPlatformAd(): Promise<boolean> {
   const win = window as any;
 
   // Helper to create a promise that waits for ad dismissal event
@@ -369,9 +384,23 @@ export async function showRewardedAd(): Promise<RewardedAdResult> {
     return { rewarded: false, unavailable: true };
   }
 
+  if (activeRewardedAdPromise) {
+    return activeRewardedAdPromise;
+  }
+
+  activeRewardedAdPromise = runShowRewardedAd().finally(() => {
+    activeRewardedAdPromise = null;
+  });
+  return activeRewardedAdPromise;
+}
+
+async function runShowRewardedAd(): Promise<RewardedAdResult> {
   const win = window as any;
 
-  const waitForReward = (triggerFn: () => boolean | void): Promise<RewardedAdResult> => {
+  const waitForReward = (
+    triggerFn: () => boolean | void,
+    useVisibilityFallback = false
+  ): Promise<RewardedAdResult> => {
     return new Promise((resolve) => {
       let resolved = false;
       let earnedReward = false;
@@ -477,13 +506,15 @@ export async function showRewardedAd(): Promise<RewardedAdResult> {
         }
       }
 
-      // 5. WebView visibility fallback: give the native bridge 1500ms after returning to foreground
-      // so explicit onRewardedAdDismissed(earned) / onRewardedAdFailed callbacks always take precedence.
+      // 5. Optional WebView visibility fallback (disabled for dedicated native bridges that always
+      // emit explicit onRewardedAdDismissed / onRewardedAdFailed callbacks, preventing premature
+      // cancellation during multi-part rewarded ads or interactive end-cards).
       let hasGoneHidden = false;
       let hiddenStartTime = 0;
       let visibilityFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
       const onVisibilityChange = () => {
+        if (!useVisibilityFallback) return;
         if (document.hidden || document.visibilityState === 'hidden') {
           hasGoneHidden = true;
           hiddenStartTime = Date.now();
@@ -505,14 +536,16 @@ export async function showRewardedAd(): Promise<RewardedAdResult> {
             } else {
               finish({ rewarded: false, unavailable: true });
             }
-          }, 1500);
+          }, 3000);
         }
       };
-      document.addEventListener('visibilitychange', onVisibilityChange);
+      if (useVisibilityFallback) {
+        document.addEventListener('visibilitychange', onVisibilityChange);
+      }
 
       const safetyTimer = setTimeout(() => {
         finish({ rewarded: earnedReward, unavailable: !earnedReward });
-      }, 65000);
+      }, 120000);
 
       cleanup = () => {
         clearTimeout(safetyTimer);
@@ -520,7 +553,9 @@ export async function showRewardedAd(): Promise<RewardedAdResult> {
           clearTimeout(visibilityFallbackTimer);
           visibilityFallbackTimer = null;
         }
-        document.removeEventListener('visibilitychange', onVisibilityChange);
+        if (useVisibilityFallback) {
+          document.removeEventListener('visibilitychange', onVisibilityChange);
+        }
         document.removeEventListener('admob.rewarded.events.REWARD', onRewardEarned);
         document.removeEventListener('admob.rewarded.events.CLOSE', handleDismissEvent);
         document.removeEventListener('admob.rewarded.events.LOAD_FAIL', onFailed);

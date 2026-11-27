@@ -5,6 +5,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
@@ -24,25 +25,36 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "SpeedNTensionAds";
-    
+
     // Live production AdMob unit IDs
     private static final String LIVE_AD_UNIT_ID = "ca-app-pub-5776267944392683/8620193138";
     private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-5776267944392683/7428238224";
-    
+
     private static final int LIGHT_BG_COLOR = Color.parseColor("#f8fafc");
 
     private InterstitialAd mInterstitialAd;
     private boolean mIsLoadingAd = false;
     private boolean mShowWhenLoaded = false;
+    private boolean mIsShowingInterstitial = false;
+    private Runnable mInterstitialTimeoutRunnable;
 
     private RewardedAd mRewardedAd;
     private boolean mIsLoadingRewardedAd = false;
     private boolean mShowRewardedWhenLoaded = false;
+    private boolean mIsShowingRewarded = false;
     private boolean mUserEarnedReward = false;
+    private Runnable mRewardedTimeoutRunnable;
+
+    // Track Activity foreground state so JS callbacks never fire into a paused WebView
+    private boolean mIsActivityResumed = false;
+    private Boolean mPendingRewardedDismissed = null;
+    private boolean mPendingRewardedFailed = false;
+    private Boolean mPendingInterstitialResult = null;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-
     private boolean mInterfaceAttached = false;
+    private long mLastAdDismissedAtMs = 0L;
+    private static final long AD_COOLDOWN_MS = 2000L;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -58,7 +70,7 @@ public class MainActivity extends BridgeActivity {
 
         applyLightBackgrounds();
 
-        // 1. Initialize MobileAds on main UI thread as required by AdMob SDK
+        // Initialize MobileAds on main UI thread as required by AdMob SDK
         try {
             MobileAds.initialize(this, initializationStatus -> {
                 Log.d(TAG, "MobileAds initialized successfully");
@@ -73,13 +85,24 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
+        mIsActivityResumed = true;
         applyLightBackgrounds();
-        if (mInterstitialAd == null && !mIsLoadingAd) {
+
+        // Flush any ad completion callbacks that arrived right before Activity resumed
+        flushPendingAdCallbacks();
+
+        if (mInterstitialAd == null && !mIsLoadingAd && !mIsShowingInterstitial) {
             loadInterstitialAd();
         }
-        if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+        if (mRewardedAd == null && !mIsLoadingRewardedAd && !mIsShowingRewarded) {
             loadRewardedAd();
         }
+    }
+
+    @Override
+    public void onPause() {
+        mIsActivityResumed = false;
+        super.onPause();
     }
 
     @Override
@@ -87,6 +110,7 @@ public class MainActivity extends BridgeActivity {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
             applyLightBackgrounds();
+            flushPendingAdCallbacks();
         }
     }
 
@@ -118,6 +142,37 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private void cancelInterstitialTimeout() {
+        if (mInterstitialTimeoutRunnable != null) {
+            mHandler.removeCallbacks(mInterstitialTimeoutRunnable);
+            mInterstitialTimeoutRunnable = null;
+        }
+    }
+
+    private void cancelRewardedTimeout() {
+        if (mRewardedTimeoutRunnable != null) {
+            mHandler.removeCallbacks(mRewardedTimeoutRunnable);
+            mRewardedTimeoutRunnable = null;
+        }
+    }
+
+    private void flushPendingAdCallbacks() {
+        if (mPendingRewardedDismissed != null) {
+            final boolean earned = mPendingRewardedDismissed;
+            mPendingRewardedDismissed = null;
+            dispatchRewardedDismissedJs(earned);
+        }
+        if (mPendingRewardedFailed) {
+            mPendingRewardedFailed = false;
+            dispatchRewardedFailedJs();
+        }
+        if (mPendingInterstitialResult != null) {
+            final boolean shown = mPendingInterstitialResult;
+            mPendingInterstitialResult = null;
+            dispatchInterstitialResultJs(shown);
+        }
+    }
+
     private void loadInterstitialAd() {
         if (mIsLoadingAd || mInterstitialAd != null) {
             return;
@@ -142,24 +197,32 @@ public class MainActivity extends BridgeActivity {
                         @Override
                         public void onAdDismissedFullScreenContent() {
                             Log.d(TAG, "Interstitial Ad dismissed by player");
+                            mIsShowingInterstitial = false;
+                            mShowWhenLoaded = false;
+                            mLastAdDismissedAtMs = SystemClock.elapsedRealtime();
+                            cancelInterstitialTimeout();
                             mInterstitialAd = null;
-                            loadInterstitialAd();
                             notifyAdResult(true);
+                            mHandler.postDelayed(() -> loadInterstitialAd(), 1500);
                         }
 
                         @Override
                         public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
                             Log.e(TAG, "Interstitial Ad failed to show: " + adError.getMessage());
+                            mIsShowingInterstitial = false;
+                            mShowWhenLoaded = false;
+                            cancelInterstitialTimeout();
                             mInterstitialAd = null;
-                            loadInterstitialAd();
                             notifyAdResult(false);
+                            mHandler.postDelayed(() -> loadInterstitialAd(), 1500);
                         }
                     });
 
-                    // If show was requested while ad was loading, show it immediately
-                    if (mShowWhenLoaded) {
+                    // Only show if explicitly waiting and no ad is currently showing
+                    if (mShowWhenLoaded && !mIsShowingInterstitial && !mIsShowingRewarded) {
                         mShowWhenLoaded = false;
-                        runOnUiThread(() -> mInterstitialAd.show(MainActivity.this));
+                        cancelInterstitialTimeout();
+                        runOnUiThread(() -> displayLoadedInterstitialAd());
                     }
                 }
 
@@ -171,12 +234,13 @@ public class MainActivity extends BridgeActivity {
 
                     if (mShowWhenLoaded) {
                         mShowWhenLoaded = false;
+                        cancelInterstitialTimeout();
                         notifyAdResult(false);
                     }
 
                     // Retry preloading after 15 seconds if idle
                     mHandler.postDelayed(() -> {
-                        if (mInterstitialAd == null && !mIsLoadingAd) {
+                        if (mInterstitialAd == null && !mIsLoadingAd && !mIsShowingInterstitial) {
                             loadInterstitialAd();
                         }
                     }, 15000);
@@ -185,10 +249,36 @@ public class MainActivity extends BridgeActivity {
         );
     }
 
+    private void displayLoadedInterstitialAd() {
+        if (mIsShowingInterstitial || mIsShowingRewarded) {
+            Log.d(TAG, "Skipping interstitial show: another fullscreen ad is already active");
+            return;
+        }
+        if (mInterstitialAd == null) {
+            notifyAdResult(false);
+            return;
+        }
+
+        final InterstitialAd adToShow = mInterstitialAd;
+        mInterstitialAd = null;
+        mShowWhenLoaded = false;
+        cancelInterstitialTimeout();
+        mIsShowingInterstitial = true;
+
+        try {
+            adToShow.show(MainActivity.this);
+        } catch (Exception e) {
+            Log.e(TAG, "Exception while showing interstitial ad", e);
+            mIsShowingInterstitial = false;
+            notifyAdResult(false);
+            mHandler.postDelayed(() -> loadInterstitialAd(), 1500);
+        }
+    }
+
     @JavascriptInterface
     public void preloadInterstitial() {
         runOnUiThread(() -> {
-            if (mInterstitialAd == null && !mIsLoadingAd) {
+            if (mInterstitialAd == null && !mIsLoadingAd && !mIsShowingInterstitial) {
                 Log.d(TAG, "Preload requested by game bridge");
                 loadInterstitialAd();
             }
@@ -198,24 +288,35 @@ public class MainActivity extends BridgeActivity {
     @JavascriptInterface
     public void showInterstitial() {
         runOnUiThread(() -> {
+            if (mIsShowingInterstitial || mIsShowingRewarded) {
+                Log.d(TAG, "Ignoring showInterstitial: an ad is already showing");
+                return;
+            }
+            if (SystemClock.elapsedRealtime() - mLastAdDismissedAtMs < AD_COOLDOWN_MS) {
+                Log.d(TAG, "Ignoring showInterstitial: post-ad cooldown active");
+                notifyAdResult(false);
+                return;
+            }
             Log.d(TAG, "Displaying Interstitial Ad requested by game");
 
             if (mInterstitialAd != null) {
                 Log.d(TAG, "Displaying ready Interstitial Ad");
-                mInterstitialAd.show(MainActivity.this);
+                displayLoadedInterstitialAd();
             } else {
                 Log.d(TAG, "Interstitial Ad not ready yet; requesting load...");
                 mShowWhenLoaded = true;
                 loadInterstitialAd();
 
-                // Allow up to 3.5 seconds for ad to finish loading before graceful fallback
-                mHandler.postDelayed(() -> {
+                cancelInterstitialTimeout();
+                mInterstitialTimeoutRunnable = () -> {
                     if (mShowWhenLoaded) {
                         Log.w(TAG, "Ad load timeout reached; proceeding without ad");
                         mShowWhenLoaded = false;
+                        mInterstitialTimeoutRunnable = null;
                         notifyAdResult(false);
                     }
-                }, 3500);
+                };
+                mHandler.postDelayed(mInterstitialTimeoutRunnable, 3500);
             }
         });
     }
@@ -232,21 +333,30 @@ public class MainActivity extends BridgeActivity {
 
     private void notifyAdResult(final boolean shown) {
         runOnUiThread(() -> {
-            applyLightBackgrounds();
-            if (bridge != null && bridge.getWebView() != null) {
-                String js = shown
-                    ? "if (typeof window.onNativeAdClosed === 'function') { window.onNativeAdClosed(true); } " +
-                      "if (typeof window.onAdClosed === 'function') { window.onAdClosed(true); } " +
-                      "if (typeof window.onInterstitialDismissed === 'function') { window.onInterstitialDismissed(true); } " +
-                      "window.dispatchEvent(new CustomEvent('adClosed', { detail: { shown: true } }));"
-                    : "if (typeof window.onNativeAdClosed === 'function') { window.onNativeAdClosed(false); } " +
-                      "if (typeof window.onAdClosed === 'function') { window.onAdClosed(false); } " +
-                      "if (typeof window.onAdFailed === 'function') { window.onAdFailed(); } " +
-                      "if (typeof window.onInterstitialFailed === 'function') { window.onInterstitialFailed(); } " +
-                      "window.dispatchEvent(new CustomEvent('adClosed', { detail: { shown: false } }));";
-                bridge.getWebView().evaluateJavascript(js, null);
+            if (mIsActivityResumed) {
+                dispatchInterstitialResultJs(shown);
+            } else {
+                mPendingInterstitialResult = shown;
+                mHandler.postDelayed(this::flushPendingAdCallbacks, 250);
             }
         });
+    }
+
+    private void dispatchInterstitialResultJs(final boolean shown) {
+        applyLightBackgrounds();
+        if (bridge != null && bridge.getWebView() != null) {
+            String js = shown
+                ? "if (typeof window.onNativeAdClosed === 'function') { window.onNativeAdClosed(true); } " +
+                  "if (typeof window.onAdClosed === 'function') { window.onAdClosed(true); } " +
+                  "if (typeof window.onInterstitialDismissed === 'function') { window.onInterstitialDismissed(true); } " +
+                  "window.dispatchEvent(new CustomEvent('adClosed', { detail: { shown: true } }));"
+                : "if (typeof window.onNativeAdClosed === 'function') { window.onNativeAdClosed(false); } " +
+                  "if (typeof window.onAdClosed === 'function') { window.onAdClosed(false); } " +
+                  "if (typeof window.onAdFailed === 'function') { window.onAdFailed(); } " +
+                  "if (typeof window.onInterstitialFailed === 'function') { window.onInterstitialFailed(); } " +
+                  "window.dispatchEvent(new CustomEvent('adClosed', { detail: { shown: false } }));";
+            bridge.getWebView().evaluateJavascript(js, null);
+        }
     }
 
     private void loadRewardedAd() {
@@ -273,31 +383,40 @@ public class MainActivity extends BridgeActivity {
                         @Override
                         public void onAdShowedFullScreenContent() {
                             Log.d(TAG, "Rewarded Ad showed fullscreen content");
-                            mUserEarnedReward = false;
                         }
 
                         @Override
                         public void onAdDismissedFullScreenContent() {
                             final boolean earned = mUserEarnedReward;
                             Log.d(TAG, "Rewarded Ad dismissed by player (earned=" + earned + ")");
+                            mIsShowingRewarded = false;
+                            mShowRewardedWhenLoaded = false;
+                            mLastAdDismissedAtMs = SystemClock.elapsedRealtime();
+                            cancelRewardedTimeout();
                             mRewardedAd = null;
                             mUserEarnedReward = false;
-                            loadRewardedAd();
                             notifyRewardedAdDismissed(earned);
+                            // Delay next preload slightly so it never interferes with resuming gameplay
+                            mHandler.postDelayed(() -> loadRewardedAd(), 1500);
                         }
 
                         @Override
                         public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
                             Log.e(TAG, "Rewarded Ad failed to show: " + adError.getMessage());
+                            mIsShowingRewarded = false;
+                            mShowRewardedWhenLoaded = false;
+                            cancelRewardedTimeout();
                             mRewardedAd = null;
                             mUserEarnedReward = false;
-                            loadRewardedAd();
                             notifyRewardedAdFailed();
+                            mHandler.postDelayed(() -> loadRewardedAd(), 1500);
                         }
                     });
 
-                    if (mShowRewardedWhenLoaded) {
+                    // Only auto-display if player is actively waiting AND no ad is already showing
+                    if (mShowRewardedWhenLoaded && !mIsShowingRewarded && !mIsShowingInterstitial) {
                         mShowRewardedWhenLoaded = false;
+                        cancelRewardedTimeout();
                         runOnUiThread(() -> displayLoadedRewardedAd());
                     }
                 }
@@ -310,12 +429,13 @@ public class MainActivity extends BridgeActivity {
 
                     if (mShowRewardedWhenLoaded) {
                         mShowRewardedWhenLoaded = false;
+                        cancelRewardedTimeout();
                         notifyRewardedAdFailed();
                     }
 
                     // Retry preloading after 15 seconds if idle
                     mHandler.postDelayed(() -> {
-                        if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+                        if (mRewardedAd == null && !mIsLoadingRewardedAd && !mIsShowingRewarded) {
                             loadRewardedAd();
                         }
                     }, 15000);
@@ -325,27 +445,46 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void displayLoadedRewardedAd() {
+        if (mIsShowingRewarded || mIsShowingInterstitial) {
+            Log.d(TAG, "Skipping rewarded show: another fullscreen ad is already active");
+            return;
+        }
         if (mRewardedAd == null) {
             notifyRewardedAdFailed();
             return;
         }
 
+        // Clear reference BEFORE showing so the same ad object can never be shown twice
+        final RewardedAd adToShow = mRewardedAd;
+        mRewardedAd = null;
+        mShowRewardedWhenLoaded = false;
+        cancelRewardedTimeout();
+        mIsShowingRewarded = true;
         mUserEarnedReward = false;
-        mRewardedAd.show(MainActivity.this, new OnUserEarnedRewardListener() {
-            @Override
-            public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
-                int rewardAmount = rewardItem.getAmount();
-                String rewardType = rewardItem.getType();
-                Log.d(TAG, "User earned reward: " + rewardAmount + " " + rewardType);
-                mUserEarnedReward = true;
-            }
-        });
+
+        try {
+            adToShow.show(MainActivity.this, new OnUserEarnedRewardListener() {
+                @Override
+                public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
+                    int rewardAmount = rewardItem.getAmount();
+                    String rewardType = rewardItem.getType();
+                    Log.d(TAG, "User earned reward: " + rewardAmount + " " + rewardType);
+                    mUserEarnedReward = true;
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Exception while showing rewarded ad", e);
+            mIsShowingRewarded = false;
+            mUserEarnedReward = false;
+            notifyRewardedAdFailed();
+            mHandler.postDelayed(() -> loadRewardedAd(), 1500);
+        }
     }
 
     @JavascriptInterface
     public void preloadRewardedAd() {
         runOnUiThread(() -> {
-            if (mRewardedAd == null && !mIsLoadingRewardedAd) {
+            if (mRewardedAd == null && !mIsLoadingRewardedAd && !mIsShowingRewarded) {
                 Log.d(TAG, "Rewarded preload requested by game bridge");
                 loadRewardedAd();
             }
@@ -360,6 +499,15 @@ public class MainActivity extends BridgeActivity {
     @JavascriptInterface
     public void showRewardedAd() {
         runOnUiThread(() -> {
+            if (mIsShowingRewarded || mIsShowingInterstitial) {
+                Log.d(TAG, "Ignoring showRewardedAd: an ad is already showing");
+                return;
+            }
+            if (SystemClock.elapsedRealtime() - mLastAdDismissedAtMs < AD_COOLDOWN_MS) {
+                Log.d(TAG, "Ignoring showRewardedAd: post-ad cooldown active");
+                notifyRewardedAdFailed();
+                return;
+            }
             Log.d(TAG, "Displaying Rewarded Ad requested by game");
 
             if (mRewardedAd != null) {
@@ -370,14 +518,17 @@ public class MainActivity extends BridgeActivity {
                 mShowRewardedWhenLoaded = true;
                 loadRewardedAd();
 
-                // Allow up to 6 seconds for rewarded ad to finish loading before graceful fallback
-                mHandler.postDelayed(() -> {
+                // Cancel any prior timeout before setting a fresh 8-second wait
+                cancelRewardedTimeout();
+                mRewardedTimeoutRunnable = () -> {
                     if (mShowRewardedWhenLoaded) {
                         Log.w(TAG, "Rewarded Ad load timeout reached");
                         mShowRewardedWhenLoaded = false;
+                        mRewardedTimeoutRunnable = null;
                         notifyRewardedAdFailed();
                     }
-                }, 6000);
+                };
+                mHandler.postDelayed(mRewardedTimeoutRunnable, 8000);
             }
         });
     }
@@ -387,30 +538,53 @@ public class MainActivity extends BridgeActivity {
         showRewardedAd();
     }
 
+    @JavascriptInterface
+    public boolean isRewardedAdLoaded() {
+        return mRewardedAd != null;
+    }
+
     private void notifyRewardedAdDismissed(final boolean rewarded) {
         runOnUiThread(() -> {
-            applyLightBackgrounds();
-            if (bridge != null && bridge.getWebView() != null) {
-                String js = rewarded
-                    ? "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(true); } " +
-                      "if (typeof window.onRewardedAdCompleted === 'function') { window.onRewardedAdCompleted(true); } " +
-                      "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: true } }));"
-                    : "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(false); } " +
-                      "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: false } }));";
-                bridge.getWebView().evaluateJavascript(js, null);
+            if (mIsActivityResumed) {
+                dispatchRewardedDismissedJs(rewarded);
+            } else {
+                mPendingRewardedDismissed = rewarded;
+                mHandler.postDelayed(this::flushPendingAdCallbacks, 250);
             }
         });
     }
 
+    private void dispatchRewardedDismissedJs(final boolean rewarded) {
+        applyLightBackgrounds();
+        if (bridge != null && bridge.getWebView() != null) {
+            String js = rewarded
+                ? "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(true); } " +
+                  "else if (typeof window.onRewardedAdCompleted === 'function') { window.onRewardedAdCompleted(true); } " +
+                  "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: true } }));"
+                : "if (typeof window.onRewardedAdDismissed === 'function') { window.onRewardedAdDismissed(false); } " +
+                  "window.dispatchEvent(new CustomEvent('rewardedAdDismissed', { detail: { rewarded: false } }));";
+            bridge.getWebView().evaluateJavascript(js, null);
+        }
+    }
+
     private void notifyRewardedAdFailed() {
         runOnUiThread(() -> {
-            applyLightBackgrounds();
-            if (bridge != null && bridge.getWebView() != null) {
-                String js =
-                    "if (typeof window.onRewardedAdFailed === 'function') { window.onRewardedAdFailed(); } " +
-                    "window.dispatchEvent(new CustomEvent('rewardedAdFailed', { detail: { reason: 'unavailable' } }));";
-                bridge.getWebView().evaluateJavascript(js, null);
+            if (mIsActivityResumed) {
+                dispatchRewardedFailedJs();
+            } else {
+                mPendingRewardedFailed = true;
+                mHandler.postDelayed(this::flushPendingAdCallbacks, 250);
             }
         });
+    }
+
+    private void dispatchRewardedFailedJs() {
+        applyLightBackgrounds();
+        if (bridge != null && bridge.getWebView() != null) {
+            String js =
+                "if (typeof window.onRewardedAdFailed === 'function') { window.onRewardedAdFailed(); } " +
+                "window.dispatchEvent(new CustomEvent('rewardedAdFailed', { detail: { reason: 'unavailable' } }));";
+            bridge.getWebView().evaluateJavascript(js, null);
+        }
     }
 }

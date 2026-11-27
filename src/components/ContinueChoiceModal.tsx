@@ -7,6 +7,8 @@ interface ContinueChoiceModalProps {
   reason: string;
   lives: number;
   maxLives: number;
+  remainingRewardedAds: number;
+  maxRewardedAds: number;
   score: number;
   colorMode: ColorMode;
   isAdLoading: boolean;
@@ -22,6 +24,8 @@ export const ContinueChoiceModal: React.FC<ContinueChoiceModalProps> = ({
   reason,
   lives,
   maxLives,
+  remainingRewardedAds,
+  maxRewardedAds,
   score,
   colorMode,
   isAdLoading,
@@ -35,6 +39,7 @@ export const ContinueChoiceModal: React.FC<ContinueChoiceModalProps> = ({
 
   const isLight = colorMode === 'light';
   const hasSpareLife = lives > 1;
+  const canWatchAd = remainingRewardedAds > 0;
   const remainingAfterUse = Math.max(0, lives - 1);
 
   return (
@@ -57,7 +62,13 @@ export const ContinueChoiceModal: React.FC<ContinueChoiceModalProps> = ({
             id="continue-choice-title"
             className="text-2xl font-black font-display tracking-tight"
           >
-            {hasSpareLife ? 'Protect Your Lives?' : 'Save Your Last Life?'}
+            {canWatchAd
+              ? hasSpareLife
+                ? 'Protect Your Lives?'
+                : 'Save Your Last Life?'
+              : hasSpareLife
+              ? 'Continue With a Life?'
+              : 'Out of Lives'}
           </h3>
           <p
             className={`text-sm font-medium ${
@@ -121,49 +132,60 @@ export const ContinueChoiceModal: React.FC<ContinueChoiceModalProps> = ({
 
         {/* Action Choices */}
         <div className="flex flex-col gap-3">
-          {/* Primary Optional Rewarded Ad Action: Protects Remaining Lives */}
-          <button
-            type="button"
-            disabled={isAdLoading}
-            onClick={onWatchAdProtectLife}
-            className="w-full min-h-14 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
-          >
-            <span className="flex items-center gap-2 font-black font-display text-base tracking-wide whitespace-nowrap">
-              {isAdLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-                  <span>Loading Ad...</span>
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-5 h-5 shrink-0" />
-                  <span>
-                    {hasSpareLife
-                      ? `Watch Ad · Keep All ${lives} Lives`
-                      : 'Watch Ad · Save Last Life'}
-                  </span>
-                </>
-              )}
-            </span>
-            <span className="text-[11px] font-medium text-emerald-100 mt-0.5 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-              <span>Optional · Continue without losing a life</span>
-            </span>
-          </button>
+          {/* Primary Optional Rewarded Ad Action (available while rewarded saves remain this run) */}
+          {canWatchAd && (
+            <button
+              type="button"
+              disabled={isAdLoading}
+              onClick={onWatchAdProtectLife}
+              className="w-full min-h-14 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all flex flex-col items-center justify-center cursor-pointer"
+            >
+              <span className="flex items-center gap-2 font-black font-display text-base tracking-wide whitespace-nowrap">
+                {isAdLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+                    <span>Loading Ad...</span>
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="w-5 h-5 shrink-0" />
+                    <span>
+                      {hasSpareLife
+                        ? `Watch Ad · Keep All ${lives} Lives`
+                        : 'Watch Ad · Save Last Life'}
+                    </span>
+                  </>
+                )}
+              </span>
+              <span className="text-[11px] font-medium text-emerald-100 mt-0.5 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Optional · {remainingRewardedAds} of {maxRewardedAds} ad{' '}
+                  {maxRewardedAds === 1 ? 'save' : 'saves'} this run
+                </span>
+              </span>
+            </button>
+          )}
 
-          {/* Secondary Non-Ad Path: Use 1 Life (when > 1 left) OR End Run (when on final life) */}
+          {/* Non-Ad Path: Use 1 Life (when > 1 left) OR End Run (when on final life) */}
           {hasSpareLife ? (
             <button
               type="button"
               disabled={isAdLoading}
               onClick={onUseLifeContinue}
-              className={`w-full min-h-13 py-3 px-4 rounded-2xl border font-bold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                  : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+              className={`w-full min-h-13 py-3 px-4 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                canWatchAd
+                  ? isLight
+                    ? 'border bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
+                    : 'border bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/25'
               }`}
             >
-              <Heart className="w-4 h-4 fill-rose-500 text-rose-500 shrink-0" />
+              <Heart
+                className={`w-4 h-4 shrink-0 ${
+                  canWatchAd ? 'fill-rose-500 text-rose-500' : 'fill-white text-white'
+                }`}
+              />
               <span className="whitespace-nowrap">
                 Use 1 Life &amp; Continue ({remainingAfterUse} left)
               </span>
@@ -173,13 +195,19 @@ export const ContinueChoiceModal: React.FC<ContinueChoiceModalProps> = ({
               type="button"
               disabled={isAdLoading}
               onClick={onEndRun}
-              className={`w-full min-h-13 py-3 px-4 rounded-2xl border font-bold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                  : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+              className={`w-full min-h-13 py-3 px-4 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                canWatchAd
+                  ? isLight
+                    ? 'border bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
+                    : 'border bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/25'
               }`}
             >
-              <Flag className="w-4 h-4 text-rose-500 shrink-0" />
+              <Flag
+                className={`w-4 h-4 shrink-0 ${
+                  canWatchAd ? 'text-rose-500' : 'text-white'
+                }`}
+              />
               <span className="whitespace-nowrap">End Run &amp; View Score</span>
             </button>
           )}

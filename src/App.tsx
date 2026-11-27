@@ -49,6 +49,7 @@ import { RulesModal } from './components/RulesModal';
 import { ContinueChoiceModal } from './components/ContinueChoiceModal';
 import { adManager } from './utils/adManager';
 import {
+  ADMOB_CONFIG,
   showPlatformAd,
   preloadPlatformAd,
   showRewardedAd,
@@ -57,6 +58,7 @@ import {
 } from './config/admob';
 
 const MAX_LIVES = 3;
+const MAX_REWARDED_ADS_PER_RUN = ADMOB_CONFIG.maxRewardedAdsPerRun;
 
 export default function App() {
   const [screen, setScreen] = useState<GameScreen>('HOME');
@@ -66,6 +68,7 @@ export default function App() {
   const [lives, setLives] = useState<number>(MAX_LIVES);
   const [lifeStatusBanner, setLifeStatusBanner] = useState<{ savedByAd: boolean; remaining: number } | null>(null);
   const [pendingMistake, setPendingMistake] = useState<{ reason: string } | null>(null);
+  const [rewardedAdsUsed, setRewardedAdsUsed] = useState<number>(0);
   const [isRewardedAdLoading, setIsRewardedAdLoading] = useState<boolean>(false);
   const [rewardedAdError, setRewardedAdError] = useState<string | null>(null);
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null);
@@ -117,6 +120,8 @@ export default function App() {
   const lastTickTimeRef = useRef<number>(performance.now());
   const isResolvedRef = useRef<boolean>(false);
   const livesRef = useRef<number>(MAX_LIVES);
+  const rewardedAdsUsedRef = useRef<number>(0);
+  const rewardedAdInFlightRef = useRef<boolean>(false);
   const transitionTimeoutRef = useRef<number | null>(null);
   const inputUnlockTimeoutRef = useRef<number | null>(null);
   const [inputLocked, setInputLocked] = useState<boolean>(false);
@@ -202,7 +207,9 @@ export default function App() {
 
     soundManager.playLifeLost();
     hapticManager.lifeLostBuzz();
-    preloadRewardedAd();
+    if (rewardedAdsUsedRef.current < MAX_REWARDED_ADS_PER_RUN) {
+      preloadRewardedAd();
+    }
 
     setScreenShake(true);
     setRewardedAdError(null);
@@ -213,59 +220,53 @@ export default function App() {
     }, 260);
   }, [isInterim]);
 
-  // Resume the exact same game session after protecting a life via ad or using 1 life
+  // Resume the exact same game session after protecting a life via ad or using 1 life.
+  // Immediately closes the modal and mounts the next challenge; the timer loop's own
+  // visibility guard safely pauses countdown if Android WebView is still finishing resume.
   const resumeSameSession = useCallback((savedByAd: boolean, remainingLives: number) => {
-    const proceed = () => {
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-        transitionTimeoutRef.current = null;
-      }
-      if (inputUnlockTimeoutRef.current) {
-        clearTimeout(inputUnlockTimeoutRef.current);
-        inputUnlockTimeoutRef.current = null;
-      }
-
-      setPendingMistake(null);
-      setRewardedAdError(null);
-      setCombo(0);
-      setLifeStatusBanner({ savedByAd, remaining: remainingLives });
-
-      const nextChal = generateNextChallenge(score, currentChallenge?.type);
-      setCurrentChallenge(nextChal);
-      setTimeRemaining(nextChal.durationMs);
-      setIsInterim(false);
-      lastTickTimeRef.current = performance.now();
-
-      inputUnlockTimeoutRef.current = window.setTimeout(() => {
-        isResolvedRef.current = false;
-        setInputLocked(false);
-      }, 120);
-
-      transitionTimeoutRef.current = window.setTimeout(() => {
-        setLifeStatusBanner(null);
-      }, 1100);
-    };
-
-    // Never start the next challenge timer while a native ad activity is still dismissing
-    if (document.hidden || document.visibilityState === 'hidden') {
-      const onVisible = () => {
-        if (!document.hidden && document.visibilityState === 'visible') {
-          document.removeEventListener('visibilitychange', onVisible);
-          window.removeEventListener('focus', onVisible);
-          proceed();
-        }
-      };
-      document.addEventListener('visibilitychange', onVisible);
-      window.addEventListener('focus', onVisible);
-      return;
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    if (inputUnlockTimeoutRef.current) {
+      clearTimeout(inputUnlockTimeoutRef.current);
+      inputUnlockTimeoutRef.current = null;
     }
 
-    proceed();
+    setPendingMistake(null);
+    setRewardedAdError(null);
+    setCombo(0);
+    setLifeStatusBanner({ savedByAd, remaining: remainingLives });
+
+    const nextChal = generateNextChallenge(score, currentChallenge?.type);
+    setCurrentChallenge(nextChal);
+    setTimeRemaining(nextChal.durationMs);
+    setIsInterim(false);
+    setScreen('PLAYING');
+    lastTickTimeRef.current = performance.now();
+
+    inputUnlockTimeoutRef.current = window.setTimeout(() => {
+      isResolvedRef.current = false;
+      setInputLocked(false);
+      lastTickTimeRef.current = performance.now();
+    }, 120);
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setLifeStatusBanner(null);
+    }, 1100);
   }, [score, currentChallenge]);
 
   // Optional rewarded ad flow: preserves current lives untouched and continues the same session
   const handleWatchAdProtectLife = async () => {
-    if (isRewardedAdLoading || !pendingMistake) return;
+    if (
+      rewardedAdInFlightRef.current ||
+      isRewardedAdLoading ||
+      !pendingMistake ||
+      rewardedAdsUsedRef.current >= MAX_REWARDED_ADS_PER_RUN
+    ) {
+      return;
+    }
+    rewardedAdInFlightRef.current = true;
     setIsRewardedAdLoading(true);
     setRewardedAdError(null);
 
@@ -275,9 +276,10 @@ export default function App() {
       soundManager.init();
 
       if (result.rewarded) {
+        rewardedAdsUsedRef.current += 1;
+        setRewardedAdsUsed(rewardedAdsUsedRef.current);
         soundManager.playLifeSaved();
         hapticManager.successCombo();
-        preloadRewardedAd();
         resumeSameSession(true, livesRef.current);
       } else {
         setRewardedAdError(
@@ -289,6 +291,7 @@ export default function App() {
     } catch {
       setRewardedAdError('Ad could not load right now. You can retry, use a life, or end the run.');
     } finally {
+      rewardedAdInFlightRef.current = false;
       setIsRewardedAdLoading(false);
     }
   };
@@ -342,10 +345,12 @@ export default function App() {
 
     if (startFreshImmediately) {
       if (adManager.shouldShowInterstitial(score)) {
-        adManager.recordAdShown();
         setIsPlatformAdLoading(true);
         try {
-          await showPlatformAd();
+          const shown = await showPlatformAd();
+          if (shown) {
+            adManager.recordAdShown();
+          }
         } catch (err) {
           console.warn('Ad error during retry:', err);
         } finally {
@@ -422,9 +427,9 @@ export default function App() {
     }, 240);
   }, [isInterim, currentChallenge, score, combo, maxRunCombo]);
 
-  // Timer loop when PLAYING
+  // Timer loop when PLAYING (guaranteed 10s countdown for every challenge)
   useEffect(() => {
-    if (screen !== 'PLAYING' || isInterim || !currentChallenge) {
+    if (screen !== 'PLAYING' || isInterim || !currentChallenge || pendingMistake) {
       if (timerRef.current) {
         cancelAnimationFrame(timerRef.current);
         timerRef.current = null;
@@ -432,29 +437,38 @@ export default function App() {
       return;
     }
 
+    let remainingMs = currentChallenge.durationMs;
+    let expired = false;
+    setTimeRemaining(remainingMs);
     lastTickTimeRef.current = performance.now();
 
     const tick = () => {
-      if (isResolvedRef.current) return;
+      if (expired) return;
+
       const now = performance.now();
       const delta = now - lastTickTimeRef.current;
       lastTickTimeRef.current = now;
 
-      // Guard against backgrounding / app suspension: do not subtract background time
-      if (document.hidden || document.visibilityState === 'hidden' || delta > 350) {
-        lastTickTimeRef.current = now;
+      // Keep RAF loop alive during brief touch-unlock grace period or backgrounding without subtracting time
+      if (
+        isResolvedRef.current ||
+        document.hidden ||
+        document.visibilityState === 'hidden' ||
+        delta > 350
+      ) {
         timerRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      setTimeRemaining((prev) => {
-        const next = prev - delta;
-        if (next <= 0) {
-          handleMistake("Time's up!");
-          return 0;
-        }
-        return next;
-      });
+      remainingMs = Math.max(0, remainingMs - delta);
+      setTimeRemaining(remainingMs);
+
+      if (remainingMs <= 0) {
+        expired = true;
+        timerRef.current = null;
+        handleMistake("Time's up!");
+        return;
+      }
 
       timerRef.current = requestAnimationFrame(tick);
     };
@@ -462,29 +476,17 @@ export default function App() {
     timerRef.current = requestAnimationFrame(tick);
 
     return () => {
+      expired = true;
       if (timerRef.current) {
         cancelAnimationFrame(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [screen, isInterim, currentChallenge, handleMistake]);
+  }, [screen, isInterim, currentChallenge, pendingMistake, handleMistake]);
 
   // Start new run
   const startNewRun = () => {
-    // If ad is still displayed or document is in background, wait until user returns
-    if (document.hidden || document.visibilityState === 'hidden') {
-      const handleReturnToVisible = () => {
-        if (!document.hidden && document.visibilityState === 'visible') {
-          document.removeEventListener('visibilitychange', handleReturnToVisible);
-          window.removeEventListener('focus', handleReturnToVisible);
-          startNewRun();
-        }
-      };
-      document.addEventListener('visibilitychange', handleReturnToVisible);
-      window.addEventListener('focus', handleReturnToVisible);
-      return;
-    }
-
+    rewardedAdInFlightRef.current = false;
     soundManager.init();
     runStartTimeRef.current = performance.now();
     if (transitionTimeoutRef.current) {
@@ -498,6 +500,8 @@ export default function App() {
     isResolvedRef.current = false;
     livesRef.current = MAX_LIVES;
     setLives(MAX_LIVES);
+    rewardedAdsUsedRef.current = 0;
+    setRewardedAdsUsed(0);
     setLifeStatusBanner(null);
     setPendingMistake(null);
     setRewardedAdError(null);
@@ -1040,6 +1044,8 @@ export default function App() {
         reason={pendingMistake?.reason || ''}
         lives={lives}
         maxLives={MAX_LIVES}
+        remainingRewardedAds={Math.max(0, MAX_REWARDED_ADS_PER_RUN - rewardedAdsUsed)}
+        maxRewardedAds={MAX_REWARDED_ADS_PER_RUN}
         score={score}
         colorMode={settings.colorMode}
         isAdLoading={isRewardedAdLoading}

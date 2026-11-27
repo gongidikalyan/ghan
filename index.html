@@ -52,8 +52,17 @@
           } catch (e) {
             isEmbeddedIframe = true;
           }
-          // Skip H5 AdSense preloading inside sandboxed preview iframes where slotcar_library fails on restricted document access
-          if (isEmbeddedIframe) return;
+          // Skip H5 AdSense inside sandboxed preview iframes or native Android/Capacitor apps (where native AdMob SDK handles ads)
+          var isNativeApp = !!(
+            (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+            window.Android ||
+            window.AndroidInterface ||
+            window.AdMobBridge ||
+            window.location.hostname === 'localhost' ||
+            window.location.protocol === 'capacitor:' ||
+            /;\s*wv\)/i.test(navigator.userAgent || '')
+          );
+          if (isEmbeddedIframe || isNativeApp) return;
 
           window.adsbygoogle = window.adsbygoogle || [];
           window.adBreak = window.adConfig = function(o) { window.adsbygoogle.push(o); };
